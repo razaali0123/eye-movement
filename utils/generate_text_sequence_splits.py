@@ -36,7 +36,7 @@ def load_text_sequence_data(
     texts = text_df.title.unique().tolist()
     subjects = fix_df.RECORDING_SESSION_LABEL.unique().tolist()
     label_arr = np.empty((0, sc.shape[1]))
-    data_arr = np.empty((0, 150, 53))
+    data_arr = np.empty((0, 150, 4))
     fix_data = np.empty((0, 398, 5))
     label_dict = {label: idx for idx, label in enumerate(sc.columns.tolist())}
     for text_id in texts:
@@ -121,7 +121,7 @@ def load_text_sequence_data(
                     [
                         np.sum(cur_fix) if len(cur_fix) >
                         0 else 0 for cur_fix in fixation_location_x
-                    ],cur_fix
+                    ],
                 ),
                 ndmin=3,
             )
