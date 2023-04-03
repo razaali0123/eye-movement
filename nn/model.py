@@ -27,6 +27,8 @@ from tensorflow.keras.layers import LSTM
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
+from transformers import AutoTokenizer, TFDistilBertForSequenceClassification
+
 from utils import feature_extraction as feature_extraction
 sys.path.append(os.getcwd())
 
@@ -38,89 +40,92 @@ def get_nn_model(
     fix_len=None, num_fix=None,
     flag_sequence_bilstm=False,
 ):
+    
+    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+    distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
 
-    drop_outs = 0.3
-    concat_list = []
-    input_list = []
+    # drop_outs = 0.3
+    # concat_list = []
+    # input_list = []
 
-    if red_pos_len is not None:
-        x_red_pos_input = Input(shape=red_pos_len)
-        x_red_pos = Embedding(
-            input_dim=num_red_pos,
-            output_dim=8,
-        )(x_red_pos_input)
-        if flag_sequence_bilstm:
-            x_red_pos = Bidirectional(
-                LSTM(25, return_sequences=True),
-            )(x_red_pos)
-            x_red_pos = Bidirectional(LSTM(25))(x_red_pos)
-            x_red_pos = Dropout(0.3)(x_red_pos)
-            x_red_pos = Dense(50, activation='relu')(x_red_pos)
-            x_red_pos = Dropout(0.3)(x_red_pos)
-            x_red_pos = Dense(20, activation='relu')(x_red_pos)
-        else:
-            x_red_pos_avg = GlobalAveragePooling1D()(x_red_pos)
-            x_red_pos_max = GlobalMaxPool1D()(x_red_pos)
-            x_red_pos = Concatenate()([x_red_pos_avg, x_red_pos_max])
-            x_red_pos = Dense(128, activation='relu')(x_red_pos)
-            x_red_pos = Dense(64, activation='relu')(x_red_pos)
-            x_red_pos = Dense(32, activation='relu')(x_red_pos)
-        concat_list.append(x_red_pos)
-        input_list.append(x_red_pos_input)
+    # if red_pos_len is not None:
+    #     x_red_pos_input = Input(shape=red_pos_len)
+    #     x_red_pos = Embedding(
+    #         input_dim=num_red_pos,
+    #         output_dim=8,
+    #     )(x_red_pos_input)
+    #     if flag_sequence_bilstm:
+    #         x_red_pos = Bidirectional(
+    #             LSTM(25, return_sequences=True),
+    #         )(x_red_pos)
+    #         x_red_pos = Bidirectional(LSTM(25))(x_red_pos)
+    #         x_red_pos = Dropout(0.3)(x_red_pos)
+    #         x_red_pos = Dense(50, activation='relu')(x_red_pos)
+    #         x_red_pos = Dropout(0.3)(x_red_pos)
+    #         x_red_pos = Dense(20, activation='relu')(x_red_pos)
+    #     else:
+    #         x_red_pos_avg = GlobalAveragePooling1D()(x_red_pos)
+    #         x_red_pos_max = GlobalMaxPool1D()(x_red_pos)
+    #         x_red_pos = Concatenate()([x_red_pos_avg, x_red_pos_max])
+    #         x_red_pos = Dense(128, activation='relu')(x_red_pos)
+    #         x_red_pos = Dense(64, activation='relu')(x_red_pos)
+    #         x_red_pos = Dense(32, activation='relu')(x_red_pos)
+    #     concat_list.append(x_red_pos)
+    #     input_list.append(x_red_pos_input)
 
-    if con_len is not None:
-        x_con_input = Input(shape=con_len)
-        x_con = Embedding(
-            input_dim=num_con,
-            output_dim=8,
-        )(x_con_input)
-        if flag_sequence_bilstm:
-            x_con = Bidirectional(LSTM(25, return_sequences=True))(x_con)
-            x_con = Bidirectional(LSTM(25))(x_con)
-            x_con = Dropout(0.3)(x_con)
-            x_con = Dense(50, activation='relu')(x_con)
-            x_con = Dropout(0.3)(x_con)
-            x_con = Dense(20, activation='relu')(x_con)
-        else:
-            x_con_avg = GlobalAveragePooling1D()(x_con)
-            x_con_max = GlobalMaxPool1D()(x_con)
-            x_con = Concatenate()([x_con_avg, x_con_max])
-            x_con = Dense(128, activation='relu')(x_con)
-            x_con = Dense(64, activation='relu')(x_con)
-            x_con = Dense(32, activation='relu')(x_con)
-        concat_list.append(x_con)
-        input_list.append(x_con_input)
+    # if con_len is not None:
+    #     x_con_input = Input(shape=con_len)
+    #     x_con = Embedding(
+    #         input_dim=num_con,
+    #         output_dim=8,
+    #     )(x_con_input)
+    #     if flag_sequence_bilstm:
+    #         x_con = Bidirectional(LSTM(25, return_sequences=True))(x_con)
+    #         x_con = Bidirectional(LSTM(25))(x_con)
+    #         x_con = Dropout(0.3)(x_con)
+    #         x_con = Dense(50, activation='relu')(x_con)
+    #         x_con = Dropout(0.3)(x_con)
+    #         x_con = Dense(20, activation='relu')(x_con)
+    #     else:
+    #         x_con_avg = GlobalAveragePooling1D()(x_con)
+    #         x_con_max = GlobalMaxPool1D()(x_con)
+    #         x_con = Concatenate()([x_con_avg, x_con_max])
+    #         x_con = Dense(128, activation='relu')(x_con)
+    #         x_con = Dense(64, activation='relu')(x_con)
+    #         x_con = Dense(32, activation='relu')(x_con)
+    #     concat_list.append(x_con)
+    #     input_list.append(x_con_input)
 
-    if num_features is not None:
-        x_num_input = Input(shape=num_features)
-        x_num = Dropout(drop_outs)(x_num_input)
-        x_num = Dense(32, activation='relu')(x_num)
-        concat_list.append(x_num)
-        input_list.append(x_num_input)
+    # if num_features is not None:
+    #     x_num_input = Input(shape=num_features)
+    #     x_num = Dropout(drop_outs)(x_num_input)
+    #     x_num = Dense(32, activation='relu')(x_num)
+    #     concat_list.append(x_num)
+    #     input_list.append(x_num_input)
 
-    if fix_len is not None:
-        x_fix_input = Input(shape=(fix_len, num_fix))
-        x_fix = Bidirectional(LSTM(25, return_sequences=True))(x_fix_input)
-        x_fix = Bidirectional(LSTM(25))(x_fix)
-        x_fix = Dropout(0.3)(x_fix)
-        x_fix = Dense(50, activation='relu')(x_fix)
-        x_fix = Dropout(0.3)(x_fix)
-        x_fix = Dense(20, activation='relu')(x_fix)
-        concat_list.append(x_fix)
-        input_list.append(x_fix_input)
+    # if fix_len is not None:
+    #     x_fix_input = Input(shape=(fix_len, num_fix))
+    #     x_fix = Bidirectional(LSTM(25, return_sequences=True))(x_fix_input)
+    #     x_fix = Bidirectional(LSTM(25))(x_fix)
+    #     x_fix = Dropout(0.3)(x_fix)
+    #     x_fix = Dense(50, activation='relu')(x_fix)
+    #     x_fix = Dropout(0.3)(x_fix)
+    #     x_fix = Dense(20, activation='relu')(x_fix)
+    #     concat_list.append(x_fix)
+    #     input_list.append(x_fix_input)
 
-    x_concat = Concatenate()(concat_list)
-    x_output = Dense(32, activation='relu')(x_concat)
-    x_output = Dense(1, activation='sigmoid')(x_output)
-    model = Model(
-        input_list,
-        outputs=x_output,
-    )
-    opt = Adam()
-    model.compile(
-        optimizer=opt, loss='binary_crossentropy',
-        metrics=['accuracy', auroc],
-    )
+    # x_concat = Concatenate()(concat_list)
+    # x_output = Dense(32, activation='relu')(x_concat)
+    # x_output = Dense(1, activation='sigmoid')(x_output)
+    # model = Model(
+    #     input_list,
+    #     outputs=x_output,
+    # )
+    # opt = Adam()
+    # model.compile(
+    #     optimizer=opt, loss='binary_crossentropy',
+    #     metrics=['accuracy', auroc],
+    # )
     # model.summary()
     return model
 
@@ -468,7 +473,7 @@ def train_nn(
                     fix_len = train_fix_matrix.shape[1]
                     num_fix = train_fix_matrix.shape[2]
                 else:
-                    fix_len = None
+                    fix_len = Nonefeature_extraction
                     num_fix = None
 
                 model = get_nn_model(

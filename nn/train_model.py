@@ -7,7 +7,7 @@ import numpy as np
 
 def main():
 
-    gpu_numbers = [0, 1, 2, 3, 4, 5, 6, 7]
+    gpu_numbers = [0]
 
     flags_sequence_bilstm = [True]
     word_in_fixation_orders = [True]

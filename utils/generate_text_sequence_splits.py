@@ -5,7 +5,8 @@ import os
 import random
 from typing import Any
 
-import feature_extraction
+# import feature_extraction
+import concise_features
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold
@@ -102,16 +103,17 @@ def load_text_sequence_data(
                     fix_aoi_id[cur_list_element - 4].extend(text_sub_df.loc[text_sub_df.CURRENT_FIX_INTEREST_AREA_ID == cur_fix].CURRENT_FIX_INTEREST_AREA_ID.values.tolist())  # noqa: E501
                     prev_fix_aoi_id[cur_list_element - 4].extend([text_sub_df.iloc[idx - 1].CURRENT_FIX_INTEREST_AREA_ID for idx in text_sub_df.loc[text_sub_df.CURRENT_FIX_INTEREST_AREA_ID == cur_fix].index.values.tolist()])  # noqa: E501
                     fixation_distance[cur_list_element - 4] = [0 if (np.isnan(x) and np.isnan(y)) else 0 if (np.isnan(x) or np.isnan(y)) else x - y for x, y in zip(fix_aoi_id[cur_list_element - 4], prev_fix_aoi_id[cur_list_element - 4])]  # noqa: E501
-            features, features_names = feature_extraction.get_linguistic_features_for_lists(
-                fixation_list=fixation_durations,
-                fixations_numbers=fixation_id,
-                regression_values=fixation_distance,
-                word_list=text_list,
-                sentence_id_list=sent_id_list,
-                suprisal_list=surprisal_list,
-                pos_tagger='spacy',
-                word_cluster_thresholds=[(1, 1), (1, 4), (5, 10), (11, 23)],
-            )
+            # features, features_names = feature_extraction.get_linguistic_features_for_lists(
+            #     fixation_list=fixation_durations,
+            #     fixations_numbers=fixation_id,
+            #     regression_values=fixation_distance,
+            #     word_list=text_list,
+            #     sentence_id_list=sent_id_list,
+            #     suprisal_list=surprisal_list,
+            #     pos_tagger='spacy',
+            #     word_cluster_thresholds=[(1, 1), (1, 4), (5, 10), (11, 23)],
+            # )
+            features = concise_features.craft_features(fixation_list=fixation_durations, word_list= text_list)
             features = features.transpose()
             tmp_len = features.shape[0]
             fix_x_arr = np.array(
@@ -119,7 +121,7 @@ def load_text_sequence_data(
                     [
                         np.sum(cur_fix) if len(cur_fix) >
                         0 else 0 for cur_fix in fixation_location_x
-                    ],
+                    ],cur_fix
                 ),
                 ndmin=3,
             )
