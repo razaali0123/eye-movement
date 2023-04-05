@@ -473,7 +473,7 @@ def train_nn(
                     fix_len = train_fix_matrix.shape[1]
                     num_fix = train_fix_matrix.shape[2]
                 else:
-                    fix_len = Nonefeature_extraction
+                    fix_len = None
                     num_fix = None
 
                 model = get_nn_model(
