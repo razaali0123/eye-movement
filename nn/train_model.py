@@ -9,30 +9,30 @@ def main():
 
     gpu_numbers = [0]
 
-    flags_sequence_bilstm = [True]
-    word_in_fixation_orders = [True]
-    use_reduced_pos_sequences = [True]
-    use_content_word_sequences = [True]
-    use_numerics = [True]
-    use_fixation_sequences = [True]
+    # flags_sequence_bilstm = [True]
+    # word_in_fixation_orders = [True]
+    # use_reduced_pos_sequences = [True]
+    # use_content_word_sequences = [True]
+    # use_numerics = [True]
+    # use_fixation_sequences = [True]
 
     param_strings = []
 
-    for flag_sequence_bilstm in flags_sequence_bilstm:
-        for word_in_fixation_order in word_in_fixation_orders:
-            for use_reduced_pos_sequence in use_reduced_pos_sequences:
-                for use_content_word_sequence in use_content_word_sequences:
-                    for use_numeric in use_numerics:
-                        for use_fixation_sequence in use_fixation_sequences:
-                            param_strings.append(
-                                '-flag_sequence_bilstm ' + str(flag_sequence_bilstm) +
-                                ' -word_in_fixation_order ' + str(word_in_fixation_order) +
-                                ' -use_reduced_pos_sequence ' + str(use_reduced_pos_sequence) +
-                                ' -use_content_word_sequence ' + str(use_content_word_sequence) +
-                                ' -use_numeric ' + str(use_numeric) +
-                                ' -use_fixation_sequence ' +
-                                str(use_fixation_sequence),
-                            )
+    # for flag_sequence_bilstm in flags_sequence_bilstm:
+    #     for word_in_fixation_order in word_in_fixation_orders:
+    #         for use_reduced_pos_sequence in use_reduced_pos_sequences:
+    #             for use_content_word_sequence in use_content_word_sequences:
+    #                 for use_numeric in use_numerics:
+    #                     for use_fixation_sequence in use_fixation_sequences:
+    #                         param_strings.append(
+    #                             '-flag_sequence_bilstm ' + str(flag_sequence_bilstm) +
+    #                             ' -word_in_fixation_order ' + str(word_in_fixation_order) +
+    #                             ' -use_reduced_pos_sequence ' + str(use_reduced_pos_sequence) +
+    #                             ' -use_content_word_sequence ' + str(use_content_word_sequence) +
+    #                             ' -use_numeric ' + str(use_numeric) +
+    #                             ' -use_fixation_sequence ' +
+    #                             str(use_fixation_sequence),
+    #                         )
 
     save_dir = 'nn/results/'
     os.makedirs(save_dir, exist_ok=True)

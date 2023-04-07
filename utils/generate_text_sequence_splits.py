@@ -15,8 +15,8 @@ from data_gen import data_gen
 
 
 def load_text_sequence_data():
-    mat, target , target_subj, mask, words, label_dict = data_gen()
-    return mat, target , target_subj, mask, words, label_dict
+    mat, target , target_subj, mask, words, label_dict, label_arr = data_gen()
+    return mat, target , target_subj, mask, words, label_dict, label_arr
 # ) -> tuple[np.ndarray, np.ndarray, dict[str, Any], np.ndarray]:
 #     datacols = [
 #         'CURRENT_FIX_X', 'CURRENT_FIX_Y', 'CURRENT_FIX_DURATION',
@@ -263,6 +263,7 @@ def write_npys(
                 with open(f'{save_path}/{split_criterion}/y_test_{split_criterion}_{fold}{suffix}.npy', 'wb') as f:  # noqa: E501
                     np.save(f, y_test_CNN)
             else:
+                print("Writing for book-page")
                 X_train_CNN = data_arr_CNN[train_idx]
                 with open(f'{save_path}/{split_criterion}/X_train_{split_criterion}_{fold}{suffix}.npy', 'wb') as f:  # noqa: E501
                     np.save(f, X_train_CNN)
@@ -280,8 +281,9 @@ def write_npys(
 
 def main() -> int:
     # label_arr, data_arr_CNN, label_dict, fix_data = load_text_sequence_data()
-    mat, target , target_subj, mask, words, label_dict = load_text_sequence_data()
+    mat, target , target_subj, mask, words, label_dict, label_arr = load_text_sequence_data()
     print("mat shape", mat.shape)
+    print("label_arr shape,", label_arr.shape)
     print("target shape", len(target))
     print("target_subj shape", len(target_subj))
     print("mask shape", len(mask))
@@ -294,7 +296,7 @@ def main() -> int:
         os.makedirs(os.path.join(save_path, split_criterion), exist_ok=True)
         print(f'Creating files for split {split_criterion}...')
         write_npys(
-            label_arr=mask,
+            label_arr=label_arr,
             data_arr_CNNs=[mat, words],
             label_dict=label_dict,
             split_criterion=split_criterion,
