@@ -475,7 +475,10 @@ def train_nn(
                 x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True)
                 # x_test_fix_postions = x_test_fix_all[:, :, 4]
                 x_test_fix_all = pd.DataFrame(x_test_fix_all, columns = ['text_list', 'text'])
-                input_ids, attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), 50, tokenizer)
+                test_input_ids, test_attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), 50, tokenizer)
+                test_inputs.append(test_input_ids)
+                test_inputs.append(test_attention_masks)
+                test_inputs.append(x_test_fix_all)
                 
                 # val_inputs.append(input_ids)
                 # val_inputs.append(attention_masks)
@@ -525,7 +528,7 @@ def train_nn(
                     batch_size=batch_size,
                     epochs=epochs,
                     callbacks=callbacks,
-                    verbose=0,
+                    verbose=2,
                 )
 
                 y_pred = model.predict(
