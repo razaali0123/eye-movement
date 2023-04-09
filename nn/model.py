@@ -665,7 +665,7 @@ def main():
 
     flag_redo = True
     patience = 7
-    batch_size = 256
+    batch_size = 8
     epochs = 25
 
     spit_criterions = ['book-page', 'subj', 'book']
