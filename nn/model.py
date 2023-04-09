@@ -442,18 +442,13 @@ def train_nn(
                 train_inputs.append(attention_masks)
                 train_inputs.append(x_train)
                 
-                print("input ids are ", input_ids.shape)
-                print("attention ids are ", attention_masks.shape)
-                print("x_train ids are ", x_train.shape)
-                print("y train is ", y_train.shape)
+
 
                 val_inputs.append(val_input_ids)
                 val_inputs.append(val_attention_masks)
                 val_inputs.append(x_val)
 
-                print("test input ids are ", val_input_ids.shape)
-                print("test attention ids are ", val_attention_masks.shape)
-                print("test x_test_all ids are ", x_val.shape)
+
                 # print("test val is ", x_val.shape)
 
                 # Test Data
@@ -478,7 +473,7 @@ def train_nn(
                 test_input_ids, test_attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), 50, tokenizer)
                 test_inputs.append(test_input_ids)
                 test_inputs.append(test_attention_masks)
-                test_inputs.append(x_test_fix_all)
+                test_inputs.append(x_test_all)
                 
                 # val_inputs.append(input_ids)
                 # val_inputs.append(attention_masks)
@@ -489,16 +484,16 @@ def train_nn(
                 # print("test x_test_all ids are ", x_test_all.shape)
                 # print("test val is ", x_val.shape)
                 
-                if normalize_flag:
-                    x_test_all = scaler.transform(
-                        x_test_all.reshape(-1, x_test_all.shape[-1]),
-                    ).reshape(x_test_all.shape)
-                    x_test_fix_all = fix_scaler.transform(
-                        x_test_fix_all.reshape(-1, x_test_fix_all.shape[-1]),
-                    ).reshape(x_test_fix_all.shape)
-                    x_test_fix_all = np.where(
-                        np.isnan(x_test_fix_all), -4, x_test_fix_all,
-                    )
+                # if normalize_flag:
+                #     x_test_all = scaler.transform(
+                #         x_test_all.reshape(-1, x_test_all.shape[-1]),
+                #     ).reshape(x_test_all.shape)
+                #     x_test_fix_all = fix_scaler.transform(
+                #         x_test_fix_all.reshape(-1, x_test_fix_all.shape[-1]),
+                #     ).reshape(x_test_fix_all.shape)
+                #     x_test_fix_all = np.where(
+                #         np.isnan(x_test_fix_all), -4, x_test_fix_all,
+                #     )
                 y_test = np.array(y_test_all[:, label_dict[label]], dtype=int)
 
 
@@ -669,9 +664,9 @@ def main():
     use_gaze_entropy_features = True
 
     flag_redo = True
-    patience = 50
+    patience = 7
     batch_size = 256
-    epochs = 1000
+    epochs = 25
 
     spit_criterions = ['book-page', 'subj', 'book']
     # labels = ['subj_acc_level', 'acc_level', 'native', 'difficulty']
