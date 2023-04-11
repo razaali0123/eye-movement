@@ -16,7 +16,7 @@ def data_prep(df, sc, seq_len = 200):
     a = len(page_book)
     z = len(subj) * a
     cols_to_drop = ['pnr',  'book', 'language', 'acc_level', 'subj_acc_level','sac_angle', 'sac_amplitude', 'sac_velcity',
-    'sac_blink'] 
+    'sac_blink', 'native', 'difficulty'] 
     df = df.drop(cols_to_drop, axis = 1)
     num_features = df.shape[1]-6 # will remove [acc, subj_acc, subj, page_book, 'word'] + book_name later
     words = []
@@ -69,7 +69,7 @@ def data_prep(df, sc, seq_len = 200):
             matrix[cnt*a + cnt_person, :, :] = temp
     return matrix, target_acc, target_subj_acc,  mask, words, label_arr
 
-def data_gen():
+def data_gen(seq_length):
     df = pd.read_csv("SB-SAT/fixation/18sat_fixfinal.csv")
     label = pd.read_csv("SB-SAT/fixation/18sat_labels.csv")
     label_dict = {label: idx for idx, label in enumerate(label.columns.tolist())}
@@ -119,7 +119,7 @@ def data_gen():
     dummies_sac_direction = pd.get_dummies(data.sac_direction)
     data = pd.concat([data, dummies_sac_direction], axis = 1).drop("sac_direction", axis = 1)
     
-    seq_length = 50
+    # seq_length = 50
     mat, target , target_subj, mask, words, label_arr = data_prep(data, seq_len = seq_length, sc = sc)
     word_df = pd.DataFrame({"text_lst": words})
     word_df['text'] = word_df.text_lst.apply(lambda x: ' '.join(x) if x is not None else x)

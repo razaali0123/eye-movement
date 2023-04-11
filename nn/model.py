@@ -56,46 +56,20 @@ def whole_book_analysis(book_list, df_cognitive):
   return final_check
 
 
-# def transformer_encode(data,maximum_length, tokenizer) :
-#   input_ids = []
-#   attention_masks = []
-  
-
-#   for i in range(len(data.text)):
-#       encoded = tokenizer.encode_plus(
-        
-#         data.text[i],
-#         add_special_tokens=True,
-#         pad_to_max_length=True,
-#         truncation = True,
-#         max_length=maximum_length,
-        
-#         return_attention_mask=True,
-        
-#       )
-      
-#       input_ids.append(encoded['input_ids'])
-#       attention_masks.append(encoded['attention_mask'])
-#   return np.array(input_ids), np.array(attention_masks)
 
 
 
 
-def get_nn_model(tokenizer, x_train):
+def get_nn_model(tokenizer, x_train, input_shape):
     df_cognitive = pd.read_csv("/home/raza/repo/etra-reading-comprehension/SB-SAT/fixation/df_cognitive.csv")
     
-    # tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
     distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
-    # book_list = df_cognitive.page_name.unique()
-    
-    # data = whole_book_analysis(book_list, df_cognitive)
-    # data['text'] = data.word.apply(lambda x: ' '.join(x))
-    # input_ids, attention_masks = transformer_encode(word_tr.reset_index(drop = True), 50)
+
     
     dropout_rate = 0.1
 
 
-    input_shape = 50
+    # input_shape = 50
 
     ids = tf.keras.Input(shape=(input_shape,),dtype='int32')
     att = tf.keras.Input(shape=(input_shape,),dtype='int32')
@@ -147,91 +121,6 @@ def get_nn_model(tokenizer, x_train):
     model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), metrics= ['AUC', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
 
     
-    
-    
-    # drop_outs = 0.3
-    # concat_list = []
-    # input_list = []
-
-    # if red_pos_len is not None:
-    #     x_red_pos_input = Input(shape=red_pos_len)
-    #     x_red_pos = Embedding(
-    #         input_dim=num_red_pos,
-    #         output_dim=8,
-    #     )(x_red_pos_input)
-    #     if flag_sequence_bilstm:
-    #         x_red_pos = Bidirectional(
-    #             LSTM(25, return_sequences=True),
-    #         )(x_red_pos)
-    #         x_red_pos = Bidirectional(LSTM(25))(x_red_pos)
-    #         x_red_pos = Dropout(0.3)(x_red_pos)
-    #         x_red_pos = Dense(50, activation='relu')(x_red_pos)
-    #         x_red_pos = Dropout(0.3)(x_red_pos)
-    #         x_red_pos = Dense(20, activation='relu')(x_red_pos)
-    #     else:
-    #         x_red_pos_avg = GlobalAveragePooling1D()(x_red_pos)
-    #         x_red_pos_max = GlobalMaxPool1D()(x_red_pos)
-    #         x_red_pos = Concatenate()([x_red_pos_avg, x_red_pos_max])
-    #         x_red_pos = Dense(128, activation='relu')(x_red_pos)
-    #         x_red_pos = Dense(64, activation='relu')(x_red_pos)
-    #         x_red_pos = Dense(32, activation='relu')(x_red_pos)
-    #     concat_list.append(x_red_pos)
-    #     input_list.append(x_red_pos_input)
-
-    # if con_len is not None:
-    #     x_con_input = Input(shape=con_len)
-    #     x_con = Embedding(
-    #         input_dim=num_con,
-    #         output_dim=8,
-    #     )(x_con_input)
-    #     if flag_sequence_bilstm:
-    #         x_con = Bidirectional(LSTM(25, return_sequences=True))(x_con)
-    #         x_con = Bidirectional(LSTM(25))(x_con)
-    #         x_con = Dropout(0.3)(x_con)
-    #         x_con = Dense(50, activation='relu')(x_con)
-    #         x_con = Dropout(0.3)(x_con)
-    #         x_con = Dense(20, activation='relu')(x_con)
-    #     else:
-    #         x_con_avg = GlobalAveragePooling1D()(x_con)
-    #         x_con_max = GlobalMaxPool1D()(x_con)
-    #         x_con = Concatenate()([x_con_avg, x_con_max])
-    #         x_con = Dense(128, activation='relu')(x_con)
-    #         x_con = Dense(64, activation='relu')(x_con)
-    #         x_con = Dense(32, activation='relu')(x_con)
-    #     concat_list.append(x_con)
-    #     input_list.append(x_con_input)
-
-    # if num_features is not None:
-    #     x_num_input = Input(shape=num_features)
-    #     x_num = Dropout(drop_outs)(x_num_input)
-    #     x_num = Dense(32, activation='relu')(x_num)
-    #     concat_list.append(x_num)
-    #     input_list.append(x_num_input)
-
-    # if fix_len is not None:
-    #     x_fix_input = Input(shape=(fix_len, num_fix))
-    #     x_fix = Bidirectional(LSTM(25, return_sequences=True))(x_fix_input)
-    #     x_fix = Bidirectional(LSTM(25))(x_fix)
-    #     x_fix = Dropout(0.3)(x_fix)
-    #     x_fix = Dense(50, activation='relu')(x_fix)
-    #     x_fix = Dropout(0.3)(x_fix)
-    #     x_fix = Dense(20, activation='relu')(x_fix)
-    #     concat_list.append(x_fix)
-    #     input_list.append(x_fix_input)
-
-    # x_concat = Concatenate()(concat_list)
-    # x_output = Dense(32, activation='relu')(x_concat)
-    # x_output = Dense(1, activation='sigmoid')(x_output)
-    # model = Model(
-    #     input_list,
-    #     outputs=x_output,
-    # )
-    # opt = Adam()
-    # model.compile(
-    #     optimizer=opt, loss='binary_crossentropy',
-    #     metrics=['accuracy', auroc],
-    # )
-    # model.summary()
     return model
 
 
@@ -274,6 +163,7 @@ def train_nn(
     spit_criterions, labels,
     feature_names_per_word,
     model_name,
+    input_shape,
     # flag_sequence_bilstm=True,
     # word_in_fixation_order=True,
     # use_reduced_pos_sequence=True,
@@ -301,7 +191,7 @@ def train_nn(
             #     '_' + str(use_numeric) +\
             #     '_' + str(use_fixation_sequence) +\
             #     '_'
-            model_prefix = "new_prefix_"
+            model_prefix = "_new_prefix_"
             csv_save_path = f'{save_dir}{model_prefix}{model_name}_{split_criterion}_text_sequence_{label}.csv'  # noqa: E501
             joblib_save_path = csv_save_path.replace('.csv', '.joblib')
             if not flag_redo and save_csv and os.path.exists(csv_save_path):
@@ -506,7 +396,7 @@ def train_nn(
 
 
 
-                model = get_nn_model(tokenizer, x_train)
+                model = get_nn_model(tokenizer, x_train, input_shape)
 
                 tf.keras.backend.clear_session()
                 callbacks = [
@@ -530,6 +420,7 @@ def train_nn(
                     test_inputs,
                     batch_size=batch_size,
                 )
+                y_pred = np.array(y_pred).reshape(-1)
                 try:
                     fpr, tpr, _ = metrics.roc_curve(
                         y_test,
@@ -606,6 +497,9 @@ def convert_string_to_boolean(input_string):
 
 
 def main():
+    import os
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or '2' to filter out warnings as well
+
     parser = argparse.ArgumentParser()
     # parser.add_argument('-GPU', '--GPU', type=int, default=4)
     # parser.add_argument(
@@ -633,6 +527,8 @@ def main():
     #     '--use_fixation_sequence', type=str, default='True',
     # )
     parser.add_argument('-save_dir', '--save_dir', type=str, default='True')
+    parser.add_argument('-seq_len', '--seq_len', type=int, default=50)
+    
 
     args = parser.parse_args()
     # GPU = args.GPU
@@ -651,14 +547,15 @@ def main():
     #     args.use_fixation_sequence,
     # )
     save_dir = args.save_dir
+    input_shape = args.seq_len
 
     # select graphic card
     # os.environ['CUDA_VISIBLE_DEVICES'] = str(0)
     # os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-    config = tf.compat.v1.ConfigProto(log_device_placement=True)
-    config.gpu_options.per_process_gpu_memory_fraction = 0.5
-    config.gpu_options.allow_growth = True
-    tf_session = tf.compat.v1.Session(config=config)  # noqa: F841
+    # config = tf.compat.v1.ConfigProto(log_device_placement=True)
+    # config.gpu_options.per_process_gpu_memory_fraction = 0.5
+    # config.gpu_options.allow_growth = True
+    # tf_session = tf.compat.v1.Session(config=config)  # noqa: F841
 
     normalize_flag = False
     use_gaze_entropy_features = True
@@ -666,11 +563,11 @@ def main():
     flag_redo = True
     patience = 7
     batch_size = 8
-    epochs = 25
+    epochs = 1
 
     spit_criterions = ['book-page', 'subj', 'book']
-    # labels = ['subj_acc_level', 'acc_level', 'native', 'difficulty']
-    labels = ['subj_acc_level', 'acc_level']
+    labels = ['subj_acc_level', 'acc_level', 'native', 'difficulty']
+    # labels = ['subj_acc_level', 'acc_level']
     
     model_name = 'nn_Raza'
 
@@ -714,6 +611,7 @@ def main():
         labels=labels,
         feature_names_per_word=feature_names_per_word,
         model_name=model_name,
+        input_shape = input_shape,
         # flag_sequence_bilstm=flag_sequence_bilstm,
         # word_in_fixation_order=word_in_fixation_order,
         # use_reduced_pos_sequence=use_reduced_pos_sequence,
