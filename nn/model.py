@@ -323,8 +323,8 @@ def train_nn(
 
                 y_train = np.array(y_train[:, label_dict[label]], dtype=int)
                 y_val = np.array(y_val[:, label_dict[label]], dtype=int)
-                input_ids, attention_masks = transformer_encode(xtr_words.reset_index(drop = True), 50, tokenizer)
-                val_input_ids, val_attention_masks = transformer_encode(val_words.reset_index(drop = True), 50, tokenizer)
+                input_ids, attention_masks = transformer_encode(xtr_words.reset_index(drop = True), input_shape, tokenizer)
+                val_input_ids, val_attention_masks = transformer_encode(val_words.reset_index(drop = True), input_shape, tokenizer)
                 
                 
                 
@@ -360,7 +360,7 @@ def train_nn(
                 x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True)
                 # x_test_fix_postions = x_test_fix_all[:, :, 4]
                 x_test_fix_all = pd.DataFrame(x_test_fix_all, columns = ['text_list', 'text'])
-                test_input_ids, test_attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), 50, tokenizer)
+                test_input_ids, test_attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), input_shape, tokenizer)
                 test_inputs.append(test_input_ids)
                 test_inputs.append(test_attention_masks)
                 test_inputs.append(x_test_all)
