@@ -12,6 +12,7 @@ import pandas as pd
 from sklearn.model_selection import KFold
 from tqdm import tqdm
 from data_gen import data_gen
+import argparse
 
 
 def load_text_sequence_data():
@@ -118,7 +119,11 @@ def write_npys(
 
 def main() -> int:
     # label_arr, data_arr_CNN, label_dict, fix_data = load_text_sequence_data()
-    mat, target , target_subj, mask, words, label_dict, label_arr = load_text_sequence_data()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-seq_len', '--seq_len', type=int, default=50)
+    args = parser.parse_args()
+    
+    mat, target , target_subj, mask, words, label_dict, label_arr = load_text_sequence_data(seq_length = args.seq_len)
     print("mat shape", mat.shape)
     print("label_arr shape,", label_arr.shape)
     print("target shape", len(target))

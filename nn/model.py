@@ -110,7 +110,7 @@ def get_nn_model(tokenizer, x_train, input_shape):
 
     output = tf.keras.layers.Dropout(dropout_rate)(output)
 
-    output = tf.keras.layers.Dense(1 ,activation='softmax')(output)
+    output = tf.keras.layers.Dense(1 ,activation='sigmoid')(output)
     model = tf.keras.models.Model(inputs = [ids, att, lstm_input],outputs = output)
     # model.compile(Adam(lr=6e-6), loss='binary_crossentropy', metrics=['accuracy'])
     for i in model.layers:
