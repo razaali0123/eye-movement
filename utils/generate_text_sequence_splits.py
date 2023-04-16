@@ -15,7 +15,7 @@ from data_gen import data_gen
 import argparse
 
 
-def load_text_sequence_data(seq_length = 50):
+def load_text_sequence_data(seq_length):
     mat, target , target_subj, mask, words, label_dict, label_arr = data_gen(seq_length = seq_length)
     return mat, target , target_subj, mask, words, label_dict, label_arr
 
