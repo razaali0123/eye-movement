@@ -15,8 +15,8 @@ from data_gen import data_gen
 import argparse
 
 
-def load_text_sequence_data(seq_length):
-    mat, target , target_subj, mask, words, label_dict, label_arr = data_gen(seq_length = seq_length)
+def load_text_sequence_data(seq_length, scale):
+    mat, target , target_subj, mask, words, label_dict, label_arr = data_gen(seq_length = seq_length, scale = scale)
     return mat, target , target_subj, mask, words, label_dict, label_arr
 
 
@@ -121,9 +121,11 @@ def main() -> int:
     # label_arr, data_arr_CNN, label_dict, fix_data = load_text_sequence_data()
     parser = argparse.ArgumentParser()
     parser.add_argument('-seq_len', '--seq_len', type=int, default=50)
+    parser.add_argument('-isScaling', '--isScaling', type=bool, default=True)
+    
     args = parser.parse_args()
     
-    mat, target , target_subj, mask, words, label_dict, label_arr = load_text_sequence_data(seq_length = args.seq_len)
+    mat, target , target_subj, mask, words, label_dict, label_arr = load_text_sequence_data(seq_length = args.seq_len, scale = args.isScaling)
     print("mat shape", mat.shape)
     print("label_arr shape,", label_arr.shape)
     print("target shape", len(target))

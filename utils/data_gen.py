@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 
@@ -69,7 +70,7 @@ def data_prep(df, sc, seq_len = 200):
             matrix[cnt*a + cnt_person, :, :] = temp
     return matrix, target_acc, target_subj_acc,  mask, words, label_arr
 
-def data_gen(seq_length):
+def data_gen(seq_length, scale):
     df = pd.read_csv("SB-SAT/fixation/18sat_fixfinal.csv")
     label = pd.read_csv("SB-SAT/fixation/18sat_labels.csv")
     label_dict = {label: idx for idx, label in enumerate(label.columns.tolist())}
@@ -121,6 +122,16 @@ def data_gen(seq_length):
     
     # seq_length = 50
     mat, target , target_subj, mask, words, label_arr = data_prep(data, seq_len = seq_length, sc = sc)
+    
+    if scale:
+        scaler = StandardScaler()
+        scaler.fit(mat)
+        mat = scaler.transform(mat)
+
+
+
+        # print(scaler.transform(a))
+    
     word_df = pd.DataFrame({"text_lst": words})
     word_df['text'] = word_df.text_lst.apply(lambda x: ' '.join(x) if x is not None else x)
     mask = np.array(mask)
