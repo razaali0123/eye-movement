@@ -71,8 +71,8 @@ def data_prep(df, sc, seq_len = 200):
     return matrix, target_acc, target_subj_acc,  mask, words, label_arr
 
 def data_gen(seq_length, scale):
-    df = pd.read_csv("SB-SAT/fixation/18sat_fixfinal.csv")
-    label = pd.read_csv("SB-SAT/fixation/18sat_labels.csv")
+    df = pd.read_csv("/home/azureuser/cloudfiles/code/Users/saniya.adeel/eye-movement/SB-SAT/fixation/18sat_fixfinal.csv")
+    label = pd.read_csv("/home/azureuser/cloudfiles/code/Users/saniya.adeel/eye-movement/SB-SAT/fixation/18sat_labels.csv")
     label_dict = {label: idx for idx, label in enumerate(label.columns.tolist())}
     
     ## old label_arr
@@ -115,7 +115,7 @@ def data_gen(seq_length, scale):
     
     df_cognitive['sex'] = df_cognitive['sex'].map({'M':1, 'F':0})
     data = df_cognitive.copy()
-    data.to_csv("/home/raza/repo/etra-reading-comprehension/SB-SAT/fixation/df_cognitive.csv",index= False)
+    data.to_csv("/home/azureuser/cloudfiles/code/Users/saniya.adeel/eye-movement/SB-SAT/fixation/df_cognitive.csv",index= False)
     
     dummies_sac_direction = pd.get_dummies(data.sac_direction)
     data = pd.concat([data, dummies_sac_direction], axis = 1).drop("sac_direction", axis = 1)
@@ -125,8 +125,12 @@ def data_gen(seq_length, scale):
     
     if scale:
         scaler = StandardScaler()
-        scaler.fit(mat)
-        mat = scaler.transform(mat)
+        mat = scaler.fit_transform(mat.reshape(-1, mat.shape[-1])).reshape(mat.shape)
+        # X_test = scaler.transform(X_test.reshape(-1, X_test.shape[-1])).reshape(X_test.shape)
+        
+        # scaler = StandardScaler()
+        # scaler.fit(mat)
+        # mat = scaler.transform(mat)
 
 
 
