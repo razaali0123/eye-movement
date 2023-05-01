@@ -31,10 +31,10 @@ from transformers import AutoTokenizer, TFDistilBertForSequenceClassification
 
 
 # from keras.models import Sequential
-from keras.layers import LSTM
+from tensorflow.keras.layers import LSTM
 # from keras.layers import Dense
 # from keras.layers import TimeDistributed
-from keras.layers import Bidirectional
+from tensorflow.keras.layers import Bidirectional
 
 # from utils import feature_extraction as feature_extraction
 sys.path.append(os.getcwd())
@@ -61,12 +61,12 @@ def whole_book_analysis(book_list, df_cognitive):
 
 
 def get_nn_model(tokenizer, x_train, input_shape):
-    df_cognitive = pd.read_csv("/home/raza/repo/etra-reading-comprehension/SB-SAT/fixation/df_cognitive.csv")
+    df_cognitive = pd.read_csv("/home/azureuser/cloudfiles/code/Users/saniya.adeel/eye-movement/SB-SAT/fixation/df_cognitive.csv")
     
     distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
 
     
-    dropout_rate = 0.1
+    dropout_rate = 0.3
 
 
     # input_shape = 50
