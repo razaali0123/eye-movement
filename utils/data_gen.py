@@ -4,16 +4,24 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 import string
+import nltk
+nltk.download('wordnet')
 from nltk.stem import WordNetLemmatizer
 
 def remove_punctuation(text):
-    punctuationfree=" ".join([i for i in text if i not in string.punctuation])
-    return punctuationfree
+    if text is not None:
+      punctuationfree="".join([i for i in text if i not in string.punctuation])
+      return punctuationfree
+    else:
+      return None
 
 def lemmatizer(text):
-    wordnet_lemmatizer = WordNetLemmatizer()
-    lemm_text = [wordnet_lemmatizer.lemmatize(word) for word in text]
-    return lemm_text
+    if text is not None:
+      wordnet_lemmatizer = WordNetLemmatizer()
+      lemm_text = " ".join([wordnet_lemmatizer.lemmatize(word) for word in text.split()])
+      return lemm_text
+    else:
+      return None
 
 
 def adding_word_length(x):
@@ -83,8 +91,8 @@ def data_prep(df, sc, seq_len = 200):
     return matrix, target_acc, target_subj_acc,  mask, words, label_arr
 
 def data_gen(seq_length, scale, preprocess_text):
-    df = pd.read_csv("/home/azureuser/cloudfiles/code/Users/saniya.adeel/eye-movement/SB-SAT/fixation/18sat_fixfinal.csv")
-    label = pd.read_csv("/home/azureuser/cloudfiles/code/Users/saniya.adeel/eye-movement/SB-SAT/fixation/18sat_labels.csv")
+    df = pd.read_csv("/content/eye-movement/SB-SAT/fixation/18sat_fixfinal.csv")
+    label = pd.read_csv("/content/eye-movement/SB-SAT/fixation/18sat_labels.csv")
     label_dict = {label: idx for idx, label in enumerate(label.columns.tolist())}
     
     ## old label_arr
@@ -127,7 +135,7 @@ def data_gen(seq_length, scale, preprocess_text):
     
     df_cognitive['sex'] = df_cognitive['sex'].map({'M':1, 'F':0})
     data = df_cognitive.copy()
-    data.to_csv("/home/azureuser/cloudfiles/code/Users/saniya.adeel/eye-movement/SB-SAT/fixation/df_cognitive.csv",index= False)
+    data.to_csv("/content/eye-movement/SB-SAT/fixation/df_cognitive.csv",index= False)
     
     dummies_sac_direction = pd.get_dummies(data.sac_direction)
     data = pd.concat([data, dummies_sac_direction], axis = 1).drop("sac_direction", axis = 1)
@@ -156,7 +164,7 @@ def data_gen(seq_length, scale, preprocess_text):
 
     if preprocess_text:
         word_df['text']= word_df['text'].apply(lambda x:remove_punctuation(x))
-        word_df['text']= word_df['text'].apply(lambda x: x.lower())
+        word_df['text']= word_df['text'].apply(lambda x: x.lower() if x is not None else None)
         word_df['text']=word_df['text'].apply(lambda x:lemmatizer(x))
         
 

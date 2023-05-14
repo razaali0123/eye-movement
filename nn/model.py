@@ -61,7 +61,7 @@ def whole_book_analysis(book_list, df_cognitive):
 
 
 def get_nn_model(tokenizer, x_train, input_shape):
-    df_cognitive = pd.read_csv("/home/azureuser/cloudfiles/code/Users/saniya.adeel/eye-movement/SB-SAT/fixation/df_cognitive.csv")
+    df_cognitive = pd.read_csv("/content/eye-movement/SB-SAT/fixation/df_cognitive.csv")
     
     distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
 
@@ -413,7 +413,7 @@ def train_nn(
                     batch_size=batch_size,
                     epochs=epochs,
                     callbacks=callbacks,
-                    verbose=2,
+                    verbose=1,
                 )
 
                 y_pred = model.predict(
