@@ -3,6 +3,18 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
+import string
+from nltk.stem import WordNetLemmatizer
+
+def remove_punctuation(text):
+    punctuationfree=" ".join([i for i in text if i not in string.punctuation])
+    return punctuationfree
+
+def lemmatizer(text):
+    wordnet_lemmatizer = WordNetLemmatizer()
+    lemm_text = [wordnet_lemmatizer.lemmatize(word) for word in text]
+    return lemm_text
+
 
 def adding_word_length(x):
     if pd.isna(x['CURRENT_FIX_INTEREST_AREA_LABEL']):
@@ -70,7 +82,7 @@ def data_prep(df, sc, seq_len = 200):
             matrix[cnt*a + cnt_person, :, :] = temp
     return matrix, target_acc, target_subj_acc,  mask, words, label_arr
 
-def data_gen(seq_length, scale):
+def data_gen(seq_length, scale, preprocess_text):
     df = pd.read_csv("/home/azureuser/cloudfiles/code/Users/saniya.adeel/eye-movement/SB-SAT/fixation/18sat_fixfinal.csv")
     label = pd.read_csv("/home/azureuser/cloudfiles/code/Users/saniya.adeel/eye-movement/SB-SAT/fixation/18sat_labels.csv")
     label_dict = {label: idx for idx, label in enumerate(label.columns.tolist())}
@@ -134,10 +146,21 @@ def data_gen(seq_length, scale):
 
 
 
+
+
+
         # print(scaler.transform(a))
     
     word_df = pd.DataFrame({"text_lst": words})
     word_df['text'] = word_df.text_lst.apply(lambda x: ' '.join(x) if x is not None else x)
+
+    if preprocess_text:
+        word_df['text']= word_df['text'].apply(lambda x:remove_punctuation(x))
+        word_df['text']= word_df['text'].apply(lambda x: x.lower())
+        word_df['text']=word_df['text'].apply(lambda x:lemmatizer(x))
+        
+
+
     mask = np.array(mask)
     target = np.array(target)
     target_subj = np.array(target_subj)
