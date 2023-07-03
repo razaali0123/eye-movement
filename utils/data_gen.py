@@ -64,9 +64,14 @@ def data_prep(df, sc, seq_len = 200):
                 target_subj_acc.append(None)
                 words.append(None)
                 continue
+            # temp = temp.sort_values("word_loc")
             temp = temp.sort_values("word_loc")
             mask.append((s,temp['book_name'].iloc[0],pb))
             temp = temp.drop("book_name", axis = 1)
+            
+            temp = temp.groupby(['subj', 'page_name', 'word', 'word_loc'], as_index = False).mean()
+            
+            temp = temp.sort_values("word_loc")
             
             target_acc.append(temp['acc'].iloc[0])
             target_subj_acc.append(temp['subj_acc'].iloc[0])
