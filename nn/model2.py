@@ -60,13 +60,13 @@ def whole_book_analysis(book_list, df_cognitive):
 
 
 
-def get_nn_model(tokenizer, x_train, input_shape):
+def get_nn_model(dropout, x_train, input_shape):
     # df_cognitive = pd.read_csv("/home/raza/repo/etra-reading-comprehension/SB-SAT/fixation/df_cognitive.csv")
     
     # distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
 
 
-    dropout_rate = 0.3
+    dropout_rate = dropout
 
     # input_shape = 100
 
@@ -167,6 +167,7 @@ def train_nn(
     feature_names_per_word,
     model_name,
     input_shape,
+    dropout,
     # flag_sequence_bilstm=True,
     # word_in_fixation_order=True,
     # use_reduced_pos_sequence=True,
@@ -412,7 +413,7 @@ def train_nn(
 
 
 
-                model = get_nn_model(tokenizer, x_train, input_shape)
+                model = get_nn_model(dropout, x_train, input_shape)
 
                 tf.keras.backend.clear_session()
                 callbacks = [
@@ -544,6 +545,8 @@ def main():
     # )
     parser.add_argument('-save_dir', '--save_dir', type=str, default='True')
     parser.add_argument('-seq_len', '--seq_len', type=int, default=50)
+    parser.add_argument('-dropout', '--dropout', type=float, default=0.3)
+
     
 
     args = parser.parse_args()
@@ -564,6 +567,7 @@ def main():
     # )
     save_dir = args.save_dir
     input_shape = args.seq_len
+    dropout = args.dropout
 
     # select graphic card
     # os.environ['CUDA_VISIBLE_DEVICES'] = str(0)
@@ -578,8 +582,8 @@ def main():
 
     flag_redo = True
     patience = 7
-    batch_size = 8
-    epochs = 1
+    batch_size = 256
+    epochs = 60
 
     spit_criterions = ['book-page', 'subj', 'book']
     labels = ['subj_acc_level', 'acc_level', 'native', 'difficulty']
@@ -628,6 +632,7 @@ def main():
         feature_names_per_word=feature_names_per_word,
         model_name=model_name,
         input_shape = input_shape,
+        dropout = dropout,
         # flag_sequence_bilstm=flag_sequence_bilstm,
         # word_in_fixation_order=word_in_fixation_order,
         # use_reduced_pos_sequence=use_reduced_pos_sequence,
