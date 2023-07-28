@@ -61,36 +61,37 @@ def whole_book_analysis(book_list, df_cognitive):
 
 
 def get_nn_model(tokenizer, x_train, input_shape):
-    df_cognitive = pd.read_csv("/home/raza/repo/etra-reading-comprehension/SB-SAT/fixation/df_cognitive.csv")
+    # df_cognitive = pd.read_csv("/home/raza/repo/etra-reading-comprehension/SB-SAT/fixation/df_cognitive.csv")
     
-    distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
+    # distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
 
 
     dropout_rate = 0.3
 
     # input_shape = 100
 
-    ids = tf.keras.Input(shape=(input_shape,),dtype='int32')
-    att = tf.keras.Input(shape=(input_shape,),dtype='int32')
+    transformer_input = tf.keras.Input(shape=(input_shape, 768),dtype='float32')
+    # att = tf.keras.Input(shape=(input_shape,),dtype='int32')
 
-    lstm_input = tf.keras.Input(shape=(input_shape, x_train.shape[2]),dtype='float64')
+    lstm_input = tf.keras.Input(shape=(input_shape, x_train.shape[2]),dtype='float32')
 
     # lstm = Bidirectional(LSTM(16, dropout=0.2)(lstm)
     # lstm = Bidirectional(LSTM(3, dropout=0.2)(lstm)
 
 
 
-    output = distill_model([ids,att])
-    output = output.hidden_states
-    n = len(output)
-    lst = [output[o] for o in range(n)]
-    concat_transformer = tf.keras.layers.concatenate(lst, axis  = 2, name = 'concat_transformer')
-    concat = tf.keras.layers.concatenate([concat_transformer, lstm_input], axis  = 2, name = 'concat')
+    # output = distill_model([ids,att])
+    # output = output.hidden_states
+    # n = len(output)
+    # lst = [output[o] for o in range(n)]
+    # concat_transformer = tf.keras.layers.concatenate(lst, axis  = 2, name = 'concat_transformer')
+    concat = tf.keras.layers.concatenate([transformer_input, lstm_input], axis  = 2, name = 'concat')
     # output = tf.keras.layers.Flatten()(output)
     ## lstm addition
     # lstm = Bidirectional(LSTM(256, dropout=0.1, return_sequences=True))(lstm_input)
     lstm = Bidirectional(LSTM(256, dropout=dropout_rate,  return_sequences=True))(concat)
     lstm = Bidirectional(LSTM(128, dropout=dropout_rate))(lstm)
+
     # output_lstm = tf.keras.layers.Dense(64,activation='relu')(lstm)
     # output_lstm = tf.keras.layers.Dense(3,activation='softmax')(lstm)
 
@@ -114,7 +115,7 @@ def get_nn_model(tokenizer, x_train, input_shape):
     output = tf.keras.layers.Dropout(dropout_rate)(output)
 
     output = tf.keras.layers.Dense(1 ,activation='sigmoid')(output)
-    model = tf.keras.models.Model(inputs = [ids, att, lstm_input],outputs = output)
+    model = tf.keras.models.Model(inputs = [transformer_input, lstm_input],outputs = output)
     # model.compile(Adam(lr=6e-6), loss='binary_crossentropy', metrics=['accuracy'])
     for i in model.layers:
         if (i.name.startswith('tf_distil')):
@@ -200,13 +201,13 @@ def train_nn(
                 continue
             if not flag_redo and save_joblib and os.path.exists(joblib_save_path):
                 continue
-            SB_SAT_PATH = f'paper_splits/{split_criterion}/'
+            SB_SAT_PATH = f'/content/paper_splits/{split_criterion}/'
             split_criterion_dict = {
                 'subj': 0,
                 'book': 1,
                 'subj-book': 0,
             }
-            with open('paper_splits/labels_dict.json') as fp:
+            with open('/content/paper_splits/labels_dict.json') as fp:
                 label_dict = json.load(fp)
 
             if (split_criterion == 'book') or (split_criterion == 'subj-book'):
@@ -245,11 +246,14 @@ def train_nn(
                 y_train_path = os.path.join(
                     SB_SAT_PATH, f'y_train_{split_criterion}_{fold}.npy',
                 )
-                x_train_all, y_train_all = np.load(X_train_path), np.load(
+                x_train_all, y_train_all = np.load(X_train_path).astype(float), np.load(
                     y_train_path, allow_pickle=True,
                 )
                 x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
-                x_train_fix_all = pd.DataFrame(x_train_fix_all, columns = ['text_list', 'text'])
+                x_train_fix_all = x_train_fix_all.astype("float")
+                # x_train_fix_all = tf.cast(x_train_fix_all, tf.float32)
+                
+                # x_train_fix_all = pd.DataFrame(x_train_fix_all, columns = ['text_list', 'text'])
 
                 
                 
@@ -318,27 +322,32 @@ def train_nn(
                 y_train = y_train_all[train_idx]
                 x_val = x_train_all[val_idx]
                 y_val = y_train_all[val_idx]
+
                 
-                xtr_words = x_train_fix_all.loc[train_idx, :]
-                val_words = x_train_fix_all.loc[val_idx, :]
-                y_train_all[val_idx]
+                xtr_words = x_train_fix_all[train_idx, :, :]
+                val_words = x_train_fix_all[val_idx, :, :]
+                # y_train_all[val_idx]
 
                 y_train = np.array(y_train[:, label_dict[label]], dtype=int)
                 y_val = np.array(y_val[:, label_dict[label]], dtype=int)
-                input_ids, attention_masks = transformer_encode(xtr_words.reset_index(drop = True), input_shape, tokenizer)
-                val_input_ids, val_attention_masks = transformer_encode(val_words.reset_index(drop = True), input_shape, tokenizer)
+                # input_ids, attention_masks = transformer_encode(xtr_words.reset_index(drop = True), input_shape, tokenizer)
+                # val_input_ids, val_attention_masks = transformer_encode(val_words.reset_index(drop = True), input_shape, tokenizer)
                 
                 
-                
-                train_inputs.append(input_ids)
-                train_inputs.append(attention_masks)
+                train_inputs.append(xtr_words)
                 train_inputs.append(x_train)
+
+                
+                # train_inputs.append(input_ids)
+                # train_inputs.append(attention_masks)
+                # train_inputs.append(x_train)
                 
 
-
-                val_inputs.append(val_input_ids)
-                val_inputs.append(val_attention_masks)
+                val_inputs.append(val_words)
                 val_inputs.append(x_val)
+                # val_inputs.append(val_input_ids)
+                # val_inputs.append(val_attention_masks)
+                # val_inputs.append(x_val)
 
 
                 # print("test val is ", x_val.shape)
@@ -356,16 +365,21 @@ def train_nn(
                     SB_SAT_PATH,
                     f'y_test_{split_criterion}_{fold}.npy',
                 )
-                x_test_all, y_test_all = np.load(X_test_path), np.load(
+                x_test_all, y_test_all = np.load(X_test_path).astype(float), np.load(
                     y_test_path, allow_pickle=True,
                 )
-                x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True)
+                x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype(float)
+                x_test_fix_all = tf.cast(x_test_fix_all, tf.float32)
                 # x_test_fix_postions = x_test_fix_all[:, :, 4]
-                x_test_fix_all = pd.DataFrame(x_test_fix_all, columns = ['text_list', 'text'])
-                test_input_ids, test_attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), input_shape, tokenizer)
-                test_inputs.append(test_input_ids)
-                test_inputs.append(test_attention_masks)
+                # x_test_fix_all = pd.DataFrame(x_test_fix_all, columns = ['text_list', 'text'])
+                # test_input_ids, test_attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), input_shape, tokenizer)
+                # test_inputs.append(test_input_ids)
+                # test_inputs.append(test_attention_masks)
+                # test_inputs.append(x_test_all)
+                test_inputs.append(x_test_fix_all)
                 test_inputs.append(x_test_all)
+
+
                 
                 # val_inputs.append(input_ids)
                 # val_inputs.append(attention_masks)

@@ -3,10 +3,80 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
+
+
 import string
 import nltk
 nltk.download('wordnet')
 from nltk.stem import WordNetLemmatizer
+
+from transformers import AutoTokenizer, TFDistilBertForSequenceClassification
+distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
+tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+
+
+def input_id_to_embeddings(df, maximum_length):
+  from tensorflow.python.ops.numpy_ops import np_config
+  np_config.enable_numpy_behavior()
+
+  total_encodings = df.total_encodings
+  total_att = df.total_att
+  mask_len = df.mask_len
+
+
+  cnt_batch = len(total_encodings)
+  final_embeddings = np.zeros((cnt_batch, maximum_length, 768))
+
+  for j in range(cnt_batch):
+
+    i = total_encodings.iloc[j]
+    a = total_att.iloc[j]
+
+    arr = distill_model([np.array(i), np.array(a)]).hidden_states[-1]
+
+    arr = arr.reshape(arr.shape[1], arr.shape[2])
+
+    for cnt, k in enumerate(mask_len.iloc[j]):
+      if k == 1:
+        final_embeddings[j, cnt, :] = arr[cnt, :]
+        continue
+      else:
+        final_embeddings[j, cnt, :] = np.sum(arr[cnt:cnt+k, :], axis = 0)
+
+  return final_embeddings
+
+
+def words_to_token_df(data, maximum_length):
+  total_att = []
+
+  mask_len = []
+  total_encodings = []
+  for i in range(len(data.text)):
+    sent_tokens_len = []
+    sent_tokens = []
+    sent_att = []
+    for cnt_words, word in enumerate(data.text.iloc[i].split()):
+      if cnt_words < maximum_length:
+        en = tokenizer.encode_plus(word, return_attention_mask=True)
+        sent_tokens_len.append(len(en.input_ids)-2)
+        sent_tokens += en.input_ids[1:-1]
+        sent_att += en.attention_mask[1:-1]
+      else:
+        break
+
+    if len(sent_tokens_len) < maximum_length:
+      diff = maximum_length - len(sent_tokens_len)
+      sent_tokens += [0]*diff
+      sent_att += [0]*diff
+      sent_tokens_len += [0]*diff
+
+
+    mask_len.append(sent_tokens_len)
+    total_encodings.append(sent_tokens)
+    total_att.append(sent_att)
+
+  return pd.DataFrame({'mask_len': mask_len, "total_encodings": total_encodings, "total_att":total_att})
+
 
 def remove_punctuation(text):
     if text is not None:
@@ -34,6 +104,7 @@ def adding_word_length(x):
 def data_prep(df, sc, seq_len = 200):
     subj = df.subj.unique()
     page_book = df.page_name.unique()
+    subj_len = len(subj)
     a = len(page_book)
     z = len(subj) * a
     cols_to_drop = ['pnr',  'book', 'language', 'acc_level', 'subj_acc_level','sac_angle', 'sac_amplitude', 'sac_velcity',
@@ -92,7 +163,7 @@ def data_prep(df, sc, seq_len = 200):
                 temp = np.append(temp, to_add, axis=0)
 
 
-            matrix[cnt*a + cnt_person, :, :] = temp
+            matrix[cnt*subj_len + cnt_person, :, :] = temp
     return matrix, target_acc, target_subj_acc,  mask, words, label_arr
 
 def data_gen(seq_length, scale, preprocess_text):
@@ -146,6 +217,8 @@ def data_gen(seq_length, scale, preprocess_text):
     data = pd.concat([data, dummies_sac_direction], axis = 1).drop("sac_direction", axis = 1)
     
     # seq_length = 50
+
+
     mat, target , target_subj, mask, words, label_arr = data_prep(data, seq_len = seq_length, sc = sc)
     
     if scale:
@@ -184,6 +257,15 @@ def data_gen(seq_length, scale, preprocess_text):
     new_mask = mask[ii, :]
     new_word_df = word_df.iloc[ii, :]
     label_arr = label_arr[ii, :]
+
+
+
+
+    new_word_df = words_to_token_df(data = new_word_df, maximum_length = seq_length)
+    new_word_df = input_id_to_embeddings(new_word_df, seq_length)
+
+
+
     return new_mat, new_target , new_target_subj, new_mask, new_word_df, label_dict, label_arr
     
 
