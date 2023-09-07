@@ -196,7 +196,7 @@ def train_nn(
             #     '_' + str(use_fixation_sequence) +\
             #     '_'
             model_prefix = "_new_prefix_"
-            csv_save_path = f'{save_dir}{model_prefix}{model_name}_{split_criterion}_text_sequence_{label}.csv'  # noqa: E501
+            csv_save_path = f'{save_dir}{model_prefix}_dropout_{dropout}_seqlen_{input_shape}_{split_criterion}_text_sequence_{label}.csv'  # noqa: E501
             joblib_save_path = csv_save_path.replace('.csv', '.joblib')
             if not flag_redo and save_csv and os.path.exists(csv_save_path):
                 continue
@@ -518,30 +518,7 @@ def main():
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or '2' to filter out warnings as well
 
     parser = argparse.ArgumentParser()
-    # parser.add_argument('-GPU', '--GPU', type=int, default=4)
-    # parser.add_argument(
-    #     '-flag_sequence_bilstm',
-    #     '--flag_sequence_bilstm', type=str, default='True',
-    # )
-    # parser.add_argument(
-    #     '-word_in_fixation_order',
-    #     '--word_in_fixation_order', type=str, default='True',
-    # )
-    # parser.add_argument(
-    #     '-use_reduced_pos_sequence',
-    #     '--use_reduced_pos_sequence', type=str, default='True',
-    # )
-    # parser.add_argument(
-    #     '-use_content_word_sequence',
-    #     '--use_content_word_sequence', type=str, default='True',
-    # )
-    # parser.add_argument(
-    #     '-use_numeric', '--use_numeric',
-    #     type=str, default='True',
-    # )
-    # parser.add_argument(
-    #     '-use_fixation_sequence',
-    #     '--use_fixation_sequence', type=str, default='True',
+
     # )
     parser.add_argument('-save_dir', '--save_dir', type=str, default='True')
     parser.add_argument('-seq_len', '--seq_len', type=int, default=50)
@@ -550,21 +527,7 @@ def main():
     
 
     args = parser.parse_args()
-    # GPU = args.GPU
-    # flag_sequence_bilstm = convert_string_to_boolean(args.flag_sequence_bilstm)
-    # word_in_fixation_order = convert_string_to_boolean(
-    #     args.word_in_fixation_order,
-    # )
-    # use_reduced_pos_sequence = convert_string_to_boolean(
-    #     args.use_reduced_pos_sequence,
-    # )
-    # use_content_word_sequence = convert_string_to_boolean(
-    #     args.use_content_word_sequence,
-    # )
-    # use_numeric = convert_string_to_boolean(args.use_numeric)
-    # use_fixation_sequence = convert_string_to_boolean(
-    #     args.use_fixation_sequence,
-    # )
+
     save_dir = args.save_dir
     input_shape = args.seq_len
     dropout = args.dropout
