@@ -705,7 +705,7 @@ def train_nn(
 
 
 
-                            model = get_nn_model(drop, x_train, input_shape)
+                            model = get_nn_model(drop, x_train, seq)
 
                             tf.keras.backend.clear_session()
                             callbacks = [
