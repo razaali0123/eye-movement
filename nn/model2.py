@@ -168,6 +168,7 @@ def train_nn(
     model_name,
     input_shape,
     dropout,
+    tuning,
     # flag_sequence_bilstm=True,
     # word_in_fixation_order=True,
     # use_reduced_pos_sequence=True,
@@ -230,234 +231,216 @@ def train_nn(
 
             pd_init['ahn_baseline'] = [model_name]
 
-            for fold in range(num_folds):
-                np.random.seed(fold)
-                random.seed(fold)
-                # collect the inputs for train, validation and test
-                # use only features where flag is True
-                train_inputs = []
-                val_inputs = []
-                test_inputs = []
-                X_train_path = os.path.join(
-                    SB_SAT_PATH, f'X_train_{split_criterion}_{fold}.npy',
-                )
-                X_train_fix_path = os.path.join(
-                    SB_SAT_PATH, f'X_train_{split_criterion}_{fold}_fix_data.npy',
-                )
-                y_train_path = os.path.join(
-                    SB_SAT_PATH, f'y_train_{split_criterion}_{fold}.npy',
-                )
-                x_train_all, y_train_all = np.load(X_train_path).astype(float), np.load(
-                    y_train_path, allow_pickle=True,
-                )
-                x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
-                x_train_fix_all = x_train_fix_all.astype("float")
-                # x_train_fix_all = tf.cast(x_train_fix_all, tf.float32)
-                
-                # x_train_fix_all = pd.DataFrame(x_train_fix_all, columns = ['text_list', 'text'])
+            if tuning != True:
 
-                
-                
-                # x_train_fix_postions = x_train_fix_all[:, :, 4]
-                if normalize_flag:
-                    scaler = MinMaxScaler()
-                    fix_scaler = MinMaxScaler()
-                    x_train_all = scaler.fit_transform(
-                        x_train_all.reshape(-1, x_train_all.shape[-1]),
-                    ).reshape(x_train_all.shape)
-                    x_train_fix_all = fix_scaler.fit_transform(
-                        x_train_fix_all.reshape(-1, x_train_fix_all.shape[-1]),
-                    ).reshape(x_train_fix_all.shape)
-                    x_train_fix_all = np.where(
-                        np.isnan(x_train_fix_all), -4, x_train_fix_all,
+                for fold in range(num_folds):
+                    np.random.seed(fold)
+                    random.seed(fold)
+                    # collect the inputs for train, validation and test
+                    # use only features where flag is True
+                    train_inputs = []
+                    val_inputs = []
+                    test_inputs = []
+                    X_train_path = os.path.join(
+                        SB_SAT_PATH, f'X_train_{split_criterion}_{fold}.npy',
                     )
-                if split_criterion != 'book':
-                    outer_cv = KFold(
-                        n_splits=4, shuffle=True,
-                        random_state=fold,
+                    X_train_fix_path = os.path.join(
+                        SB_SAT_PATH, f'X_train_{split_criterion}_{fold}_fix_data.npy',
                     )
-                else:
-                    outer_cv = KFold(
-                        n_splits=3, shuffle=True,
-                        random_state=fold,
+                    y_train_path = os.path.join(
+                        SB_SAT_PATH, f'y_train_{split_criterion}_{fold}.npy',
                     )
+                    x_train_all, y_train_all = np.load(X_train_path).astype(float), np.load(
+                        y_train_path, allow_pickle=True,
+                    )
+                    x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
+                    x_train_fix_all = x_train_fix_all.astype("float")
+                    # x_train_fix_all = tf.cast(x_train_fix_all, tf.float32)
+                    
+                    # x_train_fix_all = pd.DataFrame(x_train_fix_all, columns = ['text_list', 'text'])
 
-                if split_criterion != 'book-page':
-                    splitkeys = np.array(
-                        sorted(
-                            list(
-                                set(
-                                    y_train_all[
-                                        :,
-                                        split_criterion_dict[split_criterion],
-                                    ],
+                    
+                    
+                    # x_train_fix_postions = x_train_fix_all[:, :, 4]
+                    if normalize_flag:
+                        scaler = MinMaxScaler()
+                        fix_scaler = MinMaxScaler()
+                        x_train_all = scaler.fit_transform(
+                            x_train_all.reshape(-1, x_train_all.shape[-1]),
+                        ).reshape(x_train_all.shape)
+                        x_train_fix_all = fix_scaler.fit_transform(
+                            x_train_fix_all.reshape(-1, x_train_fix_all.shape[-1]),
+                        ).reshape(x_train_fix_all.shape)
+                        x_train_fix_all = np.where(
+                            np.isnan(x_train_fix_all), -4, x_train_fix_all,
+                        )
+                    if split_criterion != 'book':
+                        outer_cv = KFold(
+                            n_splits=4, shuffle=True,
+                            random_state=fold,
+                        )
+                    else:
+                        outer_cv = KFold(
+                            n_splits=3, shuffle=True,
+                            random_state=fold,
+                        )
+
+                    if split_criterion != 'book-page':
+                        splitkeys = np.array(
+                            sorted(
+                                list(
+                                    set(
+                                        y_train_all[
+                                            :,
+                                            split_criterion_dict[split_criterion],
+                                        ],
+                                    ),
                                 ),
                             ),
-                        ),
+                        )
+                    else:
+                        splitkeys = y_train_all[:, label_dict[label]]
+
+                    for train_idx, val_idx in outer_cv.split(splitkeys):
+                        break
+
+                    if split_criterion != 'book-page':
+                        N_train_sub = splitkeys[train_idx]
+                        N_test_sub = splitkeys[val_idx]
+
+                        train_idx = np.where(
+                            np.isin(
+                                y_train_all[
+                                    :, split_criterion_dict[split_criterion],
+                                ], N_train_sub,
+                            ),
+                        )[0]
+                        val_idx = np.where(
+                            np.isin(
+                                y_train_all[
+                                    :, split_criterion_dict[split_criterion],
+                                ], N_test_sub,
+                            ),
+                        )[0]
+                    x_train = x_train_all[train_idx]
+                    y_train = y_train_all[train_idx]
+                    x_val = x_train_all[val_idx]
+                    y_val = y_train_all[val_idx]
+
+                    
+                    xtr_words = x_train_fix_all[train_idx, :, :]
+                    val_words = x_train_fix_all[val_idx, :, :]
+                    # y_train_all[val_idx]
+
+                    y_train = np.array(y_train[:, label_dict[label]], dtype=int)
+                    y_val = np.array(y_val[:, label_dict[label]], dtype=int)
+                    # input_ids, attention_masks = transformer_encode(xtr_words.reset_index(drop = True), input_shape, tokenizer)
+                    # val_input_ids, val_attention_masks = transformer_encode(val_words.reset_index(drop = True), input_shape, tokenizer)
+                    
+                    
+                    train_inputs.append(xtr_words)
+                    train_inputs.append(x_train)
+
+                    
+                    # train_inputs.append(input_ids)
+                    # train_inputs.append(attention_masks)
+                    # train_inputs.append(x_train)
+                    
+
+                    val_inputs.append(val_words)
+                    val_inputs.append(x_val)
+                    # val_inputs.append(val_input_ids)
+                    # val_inputs.append(val_attention_masks)
+                    # val_inputs.append(x_val)
+
+
+                    # print("test val is ", x_val.shape)
+
+                    # Test Data
+                    X_test_path = os.path.join(
+                        SB_SAT_PATH,
+                        f'X_test_{split_criterion}_{fold}.npy',
                     )
-                else:
-                    splitkeys = y_train_all[:, label_dict[label]]
-
-                for train_idx, val_idx in outer_cv.split(splitkeys):
-                    break
-
-                if split_criterion != 'book-page':
-                    N_train_sub = splitkeys[train_idx]
-                    N_test_sub = splitkeys[val_idx]
-
-                    train_idx = np.where(
-                        np.isin(
-                            y_train_all[
-                                :, split_criterion_dict[split_criterion],
-                            ], N_train_sub,
-                        ),
-                    )[0]
-                    val_idx = np.where(
-                        np.isin(
-                            y_train_all[
-                                :, split_criterion_dict[split_criterion],
-                            ], N_test_sub,
-                        ),
-                    )[0]
-                x_train = x_train_all[train_idx]
-                y_train = y_train_all[train_idx]
-                x_val = x_train_all[val_idx]
-                y_val = y_train_all[val_idx]
-
-                
-                xtr_words = x_train_fix_all[train_idx, :, :]
-                val_words = x_train_fix_all[val_idx, :, :]
-                # y_train_all[val_idx]
-
-                y_train = np.array(y_train[:, label_dict[label]], dtype=int)
-                y_val = np.array(y_val[:, label_dict[label]], dtype=int)
-                # input_ids, attention_masks = transformer_encode(xtr_words.reset_index(drop = True), input_shape, tokenizer)
-                # val_input_ids, val_attention_masks = transformer_encode(val_words.reset_index(drop = True), input_shape, tokenizer)
-                
-                
-                train_inputs.append(xtr_words)
-                train_inputs.append(x_train)
-
-                
-                # train_inputs.append(input_ids)
-                # train_inputs.append(attention_masks)
-                # train_inputs.append(x_train)
-                
-
-                val_inputs.append(val_words)
-                val_inputs.append(x_val)
-                # val_inputs.append(val_input_ids)
-                # val_inputs.append(val_attention_masks)
-                # val_inputs.append(x_val)
-
-
-                # print("test val is ", x_val.shape)
-
-                # Test Data
-                X_test_path = os.path.join(
-                    SB_SAT_PATH,
-                    f'X_test_{split_criterion}_{fold}.npy',
-                )
-                X_test_fix_path = os.path.join(
-                    SB_SAT_PATH,
-                    f'X_test_{split_criterion}_{fold}_fix_data.npy',
-                )
-                y_test_path = os.path.join(
-                    SB_SAT_PATH,
-                    f'y_test_{split_criterion}_{fold}.npy',
-                )
-                x_test_all, y_test_all = np.load(X_test_path).astype(float), np.load(
-                    y_test_path, allow_pickle=True,
-                )
-                x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype(float)
-                x_test_fix_all = tf.cast(x_test_fix_all, tf.float32)
-                # x_test_fix_postions = x_test_fix_all[:, :, 4]
-                # x_test_fix_all = pd.DataFrame(x_test_fix_all, columns = ['text_list', 'text'])
-                # test_input_ids, test_attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), input_shape, tokenizer)
-                # test_inputs.append(test_input_ids)
-                # test_inputs.append(test_attention_masks)
-                # test_inputs.append(x_test_all)
-                test_inputs.append(x_test_fix_all)
-                test_inputs.append(x_test_all)
-
-
-                
-                # val_inputs.append(input_ids)
-                # val_inputs.append(attention_masks)
-                # val_inputs.append(x_test_all)
-
-                # print("test input ids are ", input_ids.shape)
-                # print("test attention ids are ", attention_masks.shape)
-                # print("test x_test_all ids are ", x_test_all.shape)
-                # print("test val is ", x_val.shape)
-                
-                # if normalize_flag:
-                #     x_test_all = scaler.transform(
-                #         x_test_all.reshape(-1, x_test_all.shape[-1]),
-                #     ).reshape(x_test_all.shape)
-                #     x_test_fix_all = fix_scaler.transform(
-                #         x_test_fix_all.reshape(-1, x_test_fix_all.shape[-1]),
-                #     ).reshape(x_test_fix_all.shape)
-                #     x_test_fix_all = np.where(
-                #         np.isnan(x_test_fix_all), -4, x_test_fix_all,
-                #     )
-                y_test = np.array(y_test_all[:, label_dict[label]], dtype=int)
-
-
-
-                # scale the input
-                # input_scaler = MinMaxScaler()
-                # x_train = input_scaler.fit_transform(x_train)
-                # x_val = input_scaler.transform(x_val)
-                # x_test = input_scaler.transform(x_test)
-
-
-
-                model = get_nn_model(dropout, x_train, input_shape)
-
-                tf.keras.backend.clear_session()
-                callbacks = [
-                    EarlyStopping(
-                        monitor='val_loss', patience=patience,
-                    ),
-                ]
-                history = model.fit(  # noqa: F841
-                    train_inputs, y_train,
-                    validation_data=(
-                        val_inputs,
-                        y_val,
-                    ),
-                    batch_size=batch_size,
-                    epochs=epochs,
-                    callbacks=callbacks,
-                    verbose=2,
-                )
-
-                y_pred = model.predict(
-                    test_inputs,
-                    batch_size=batch_size,
-                )
-                y_pred = np.array(y_pred).reshape(-1)
-                try:
-                    fpr, tpr, _ = metrics.roc_curve(
-                        y_test,
-                        y_pred,
-                        pos_label=1,
+                    X_test_fix_path = os.path.join(
+                        SB_SAT_PATH,
+                        f'X_test_{split_criterion}_{fold}_fix_data.npy',
                     )
-                    auc = metrics.auc(fpr, tpr)
-                    print(auc)
-                    pd_init[f'fold{fold}_auc'] = auc
-                    pd_init[f'fold{fold}_tpr'] = [tpr]
-                    pd_init[f'fold{fold}_fpr'] = [fpr]
-                    pd_init[f'fold{fold}_y_test'] = [y_test]
-                    pd_init[f'fold{fold}_y_pred'] = [y_pred]
+                    y_test_path = os.path.join(
+                        SB_SAT_PATH,
+                        f'y_test_{split_criterion}_{fold}.npy',
+                    )
+                    x_test_all, y_test_all = np.load(X_test_path).astype(float), np.load(
+                        y_test_path, allow_pickle=True,
+                    )
+                    x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype(float)
+                    x_test_fix_all = tf.cast(x_test_fix_all, tf.float32)
+                    # x_test_fix_postions = x_test_fix_all[:, :, 4]
+                    # x_test_fix_all = pd.DataFrame(x_test_fix_all, columns = ['text_list', 'text'])
+                    # test_input_ids, test_attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), input_shape, tokenizer)
+                    # test_inputs.append(test_input_ids)
+                    # test_inputs.append(test_attention_masks)
+                    # test_inputs.append(x_test_all)
+                    test_inputs.append(x_test_fix_all)
+                    test_inputs.append(x_test_all)
 
-                    out_dict[f'fold{fold}_auc'] = auc
-                    out_dict[f'fold{fold}_tpr'] = [tpr]
-                    out_dict[f'fold{fold}_fpr'] = [fpr]
-                    out_dict[f'fold{fold}_y_test'] = [y_test]
-                    out_dict[f'fold{fold}_y_pred'] = [y_pred]
-                except KeyError:
+
+                    
+                    # val_inputs.append(input_ids)
+                    # val_inputs.append(attention_masks)
+                    # val_inputs.append(x_test_all)
+
+                    # print("test input ids are ", input_ids.shape)
+                    # print("test attention ids are ", attention_masks.shape)
+                    # print("test x_test_all ids are ", x_test_all.shape)
+                    # print("test val is ", x_val.shape)
+                    
+                    # if normalize_flag:
+                    #     x_test_all = scaler.transform(
+                    #         x_test_all.reshape(-1, x_test_all.shape[-1]),
+                    #     ).reshape(x_test_all.shape)
+                    #     x_test_fix_all = fix_scaler.transform(
+                    #         x_test_fix_all.reshape(-1, x_test_fix_all.shape[-1]),
+                    #     ).reshape(x_test_fix_all.shape)
+                    #     x_test_fix_all = np.where(
+                    #         np.isnan(x_test_fix_all), -4, x_test_fix_all,
+                    #     )
+                    y_test = np.array(y_test_all[:, label_dict[label]], dtype=int)
+
+
+
+                    # scale the input
+                    # input_scaler = MinMaxScaler()
+                    # x_train = input_scaler.fit_transform(x_train)
+                    # x_val = input_scaler.transform(x_val)
+                    # x_test = input_scaler.transform(x_test)
+
+
+
+                    model = get_nn_model(dropout, x_train, input_shape)
+
+                    tf.keras.backend.clear_session()
+                    callbacks = [
+                        EarlyStopping(
+                            monitor='val_loss', patience=patience,
+                        ),
+                    ]
+                    history = model.fit(  # noqa: F841
+                        train_inputs, y_train,
+                        validation_data=(
+                            val_inputs,
+                            y_val,
+                        ),
+                        batch_size=batch_size,
+                        epochs=epochs,
+                        callbacks=callbacks,
+                        verbose=2,
+                    )
+
+                    y_pred = model.predict(
+                        test_inputs,
+                        batch_size=batch_size,
+                    )
+                    y_pred = np.array(y_pred).reshape(-1)
                     try:
                         fpr, tpr, _ = metrics.roc_curve(
                             y_test,
@@ -469,43 +452,361 @@ def train_nn(
                         pd_init[f'fold{fold}_auc'] = auc
                         pd_init[f'fold{fold}_tpr'] = [tpr]
                         pd_init[f'fold{fold}_fpr'] = [fpr]
-                        pd_init[f'fold{fold}_y_test'] = y_test
-                        pd_init[f'fold{fold}_y_pred'] = y_pred
+                        pd_init[f'fold{fold}_y_test'] = [y_test]
+                        pd_init[f'fold{fold}_y_pred'] = [y_pred]
 
                         out_dict[f'fold{fold}_auc'] = auc
                         out_dict[f'fold{fold}_tpr'] = [tpr]
                         out_dict[f'fold{fold}_fpr'] = [fpr]
-                        out_dict[f'fold{fold}_y_test'] = y_test
-                        out_dict[f'fold{fold}_y_pred'] = y_pred
-                    except KeyError as e:
-                        raise e
+                        out_dict[f'fold{fold}_y_test'] = [y_test]
+                        out_dict[f'fold{fold}_y_pred'] = [y_pred]
+                    except KeyError:
+                        try:
+                            fpr, tpr, _ = metrics.roc_curve(
+                                y_test,
+                                y_pred,
+                                pos_label=1,
+                            )
+                            auc = metrics.auc(fpr, tpr)
+                            print(auc)
+                            pd_init[f'fold{fold}_auc'] = auc
+                            pd_init[f'fold{fold}_tpr'] = [tpr]
+                            pd_init[f'fold{fold}_fpr'] = [fpr]
+                            pd_init[f'fold{fold}_y_test'] = y_test
+                            pd_init[f'fold{fold}_y_pred'] = y_pred
 
-            pd_init['avg_auc'] = 0
-            out_dict['avg_auc'] = 0
-            for i in range(num_folds):
-                pd_init['avg_auc'] += pd_init[f'fold{i}_auc']
-                out_dict['avg_auc'] += out_dict[f'fold{i}_auc']
-            pd_init['avg_auc'] /= num_folds
-            out_dict['avg_auc'] /= num_folds
+                            out_dict[f'fold{fold}_auc'] = auc
+                            out_dict[f'fold{fold}_tpr'] = [tpr]
+                            out_dict[f'fold{fold}_fpr'] = [fpr]
+                            out_dict[f'fold{fold}_y_test'] = y_test
+                            out_dict[f'fold{fold}_y_pred'] = y_pred
+                        except KeyError as e:
+                            raise e
 
-            pd_init['std_auc'] = 0
-            out_dict['std_auc'] = 0
-            for i in range(0, num_folds):
-                pd_init['std_auc'] += (
-                    pd_init[f'fold{i}_auc'] -
-                    pd_init['avg_auc']
-                )**2
-                out_dict['std_auc'] += (
-                    out_dict[f'fold{i}_auc'] - out_dict['avg_auc']
-                )**2
-            pd_init['std_auc'] = (pd_init['std_auc'] / num_folds)**(1 / 2)
-            out_dict['std_auc'] = (out_dict['std_auc'] / num_folds)**(1 / 2)
-            if save_csv:
-                pd_init.to_csv(csv_save_path, index=None)
-            if save_joblib:
-                joblib.dump(out_dict, joblib_save_path, compress=3, protocol=2)
-            print('mean auc: ' + str(pd_init['avg_auc']))
+                pd_init['avg_auc'] = 0
+                out_dict['avg_auc'] = 0
+                for i in range(num_folds):
+                    pd_init['avg_auc'] += pd_init[f'fold{i}_auc']
+                    out_dict['avg_auc'] += out_dict[f'fold{i}_auc']
+                pd_init['avg_auc'] /= num_folds
+                out_dict['avg_auc'] /= num_folds
 
+                pd_init['std_auc'] = 0
+                out_dict['std_auc'] = 0
+                for i in range(0, num_folds):
+                    pd_init['std_auc'] += (
+                        pd_init[f'fold{i}_auc'] -
+                        pd_init['avg_auc']
+                    )**2
+                    out_dict['std_auc'] += (
+                        out_dict[f'fold{i}_auc'] - out_dict['avg_auc']
+                    )**2
+                pd_init['std_auc'] = (pd_init['std_auc'] / num_folds)**(1 / 2)
+                out_dict['std_auc'] = (out_dict['std_auc'] / num_folds)**(1 / 2)
+                if save_csv:
+                    pd_init.to_csv(csv_save_path, index=None)
+                if save_joblib:
+                    joblib.dump(out_dict, joblib_save_path, compress=3, protocol=2)
+                print('mean auc: ' + str(pd_init['avg_auc']))
+                
+            else:
+                hyper = {"seq_len_list": [75, 100],
+                         "dropout_list": [0.3, 0.5]}
+                
+                for seq in hyper['seq_len_list']:
+                    for drop in hyper['dropout_list']:
+
+                        for fold in range(num_folds):
+                            np.random.seed(fold)
+                            random.seed(fold)
+                            # collect the inputs for train, validation and test
+                            # use only features where flag is True
+                            train_inputs = []
+                            val_inputs = []
+                            test_inputs = []
+                            X_train_path = os.path.join(
+                                SB_SAT_PATH, f'X_train_{split_criterion}_{fold}.npy',
+                            )
+                            X_train_fix_path = os.path.join(
+                                SB_SAT_PATH, f'X_train_{split_criterion}_{fold}_fix_data.npy',
+                            )
+                            y_train_path = os.path.join(
+                                SB_SAT_PATH, f'y_train_{split_criterion}_{fold}.npy',
+                            )
+                            x_train_all, y_train_all = np.load(X_train_path).astype(float), np.load(
+                                y_train_path, allow_pickle=True,
+                            )
+                            x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
+                            x_train_fix_all = x_train_fix_all.astype("float")
+
+                            x_train_fix_all = x_train_fix_all[:, :seq, :]
+                            x_train_all = x_train_all[:, :seq, :]
+                            # x_train_fix_all = tf.cast(x_train_fix_all, tf.float32)
+                            
+                            # x_train_fix_all = pd.DataFrame(x_train_fix_all, columns = ['text_list', 'text'])
+
+                            
+                            
+                            # x_train_fix_postions = x_train_fix_all[:, :, 4]
+                            if normalize_flag:
+                                scaler = MinMaxScaler()
+                                fix_scaler = MinMaxScaler()
+                                x_train_all = scaler.fit_transform(
+                                    x_train_all.reshape(-1, x_train_all.shape[-1]),
+                                ).reshape(x_train_all.shape)
+                                x_train_fix_all = fix_scaler.fit_transform(
+                                    x_train_fix_all.reshape(-1, x_train_fix_all.shape[-1]),
+                                ).reshape(x_train_fix_all.shape)
+                                x_train_fix_all = np.where(
+                                    np.isnan(x_train_fix_all), -4, x_train_fix_all,
+                                )
+                            if split_criterion != 'book':
+                                outer_cv = KFold(
+                                    n_splits=4, shuffle=True,
+                                    random_state=fold,
+                                )
+                            else:
+                                outer_cv = KFold(
+                                    n_splits=3, shuffle=True,
+                                    random_state=fold,
+                                )
+
+                            if split_criterion != 'book-page':
+                                splitkeys = np.array(
+                                    sorted(
+                                        list(
+                                            set(
+                                                y_train_all[
+                                                    :,
+                                                    split_criterion_dict[split_criterion],
+                                                ],
+                                            ),
+                                        ),
+                                    ),
+                                )
+                            else:
+                                splitkeys = y_train_all[:, label_dict[label]]
+
+                            for train_idx, val_idx in outer_cv.split(splitkeys):
+                                break
+
+                            if split_criterion != 'book-page':
+                                N_train_sub = splitkeys[train_idx]
+                                N_test_sub = splitkeys[val_idx]
+
+                                train_idx = np.where(
+                                    np.isin(
+                                        y_train_all[
+                                            :, split_criterion_dict[split_criterion],
+                                        ], N_train_sub,
+                                    ),
+                                )[0]
+                                val_idx = np.where(
+                                    np.isin(
+                                        y_train_all[
+                                            :, split_criterion_dict[split_criterion],
+                                        ], N_test_sub,
+                                    ),
+                                )[0]
+                            x_train = x_train_all[train_idx]
+                            y_train = y_train_all[train_idx]
+                            x_val = x_train_all[val_idx]
+                            y_val = y_train_all[val_idx]
+
+                            
+                            xtr_words = x_train_fix_all[train_idx, :, :]
+                            val_words = x_train_fix_all[val_idx, :, :]
+                            # y_train_all[val_idx]
+
+                            y_train = np.array(y_train[:, label_dict[label]], dtype=int)
+                            y_val = np.array(y_val[:, label_dict[label]], dtype=int)
+                            # input_ids, attention_masks = transformer_encode(xtr_words.reset_index(drop = True), input_shape, tokenizer)
+                            # val_input_ids, val_attention_masks = transformer_encode(val_words.reset_index(drop = True), input_shape, tokenizer)
+                            
+                            
+                            train_inputs.append(xtr_words)
+                            train_inputs.append(x_train)
+
+                            
+                            # train_inputs.append(input_ids)
+                            # train_inputs.append(attention_masks)
+                            # train_inputs.append(x_train)
+                            
+
+                            val_inputs.append(val_words)
+                            val_inputs.append(x_val)
+                            # val_inputs.append(val_input_ids)
+                            # val_inputs.append(val_attention_masks)
+                            # val_inputs.append(x_val)
+
+
+                            # print("test val is ", x_val.shape)
+
+                            # Test Data
+                            X_test_path = os.path.join(
+                                SB_SAT_PATH,
+                                f'X_test_{split_criterion}_{fold}.npy',
+                            )
+                            X_test_fix_path = os.path.join(
+                                SB_SAT_PATH,
+                                f'X_test_{split_criterion}_{fold}_fix_data.npy',
+                            )
+                            y_test_path = os.path.join(
+                                SB_SAT_PATH,
+                                f'y_test_{split_criterion}_{fold}.npy',
+                            )
+                            x_test_all, y_test_all = np.load(X_test_path).astype(float), np.load(
+                                y_test_path, allow_pickle=True,
+                            )
+                            x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype(float)
+                            x_test_fix_all = tf.cast(x_test_fix_all, tf.float32)
+
+                            x_test_fix_all = x_test_fix_all[:, :seq, :]
+                            x_test_all = x_test_all[:, :seq, :]
+                            # x_test_fix_postions = x_test_fix_all[:, :, 4]
+                            # x_test_fix_all = pd.DataFrame(x_test_fix_all, columns = ['text_list', 'text'])
+                            # test_input_ids, test_attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), input_shape, tokenizer)
+                            # test_inputs.append(test_input_ids)
+                            # test_inputs.append(test_attention_masks)
+                            # test_inputs.append(x_test_all)
+                            test_inputs.append(x_test_fix_all)
+                            test_inputs.append(x_test_all)
+
+
+                            
+                            # val_inputs.append(input_ids)
+                            # val_inputs.append(attention_masks)
+                            # val_inputs.append(x_test_all)
+
+                            # print("test input ids are ", input_ids.shape)
+                            # print("test attention ids are ", attention_masks.shape)
+                            # print("test x_test_all ids are ", x_test_all.shape)
+                            # print("test val is ", x_val.shape)
+                            
+                            # if normalize_flag:
+                            #     x_test_all = scaler.transform(
+                            #         x_test_all.reshape(-1, x_test_all.shape[-1]),
+                            #     ).reshape(x_test_all.shape)
+                            #     x_test_fix_all = fix_scaler.transform(
+                            #         x_test_fix_all.reshape(-1, x_test_fix_all.shape[-1]),
+                            #     ).reshape(x_test_fix_all.shape)
+                            #     x_test_fix_all = np.where(
+                            #         np.isnan(x_test_fix_all), -4, x_test_fix_all,
+                            #     )
+                            y_test = np.array(y_test_all[:, label_dict[label]], dtype=int)
+
+
+
+                            # scale the input
+                            # input_scaler = MinMaxScaler()
+                            # x_train = input_scaler.fit_transform(x_train)
+                            # x_val = input_scaler.transform(x_val)
+                            # x_test = input_scaler.transform(x_test)
+
+
+
+                            model = get_nn_model(drop, x_train, input_shape)
+
+                            tf.keras.backend.clear_session()
+                            callbacks = [
+                                EarlyStopping(
+                                    monitor='val_loss', patience=patience,
+                                ),
+                            ]
+                            history = model.fit(  # noqa: F841
+                                train_inputs, y_train,
+                                validation_data=(
+                                    val_inputs,
+                                    y_val,
+                                ),
+                                batch_size=batch_size,
+                                epochs=epochs,
+                                callbacks=callbacks,
+                                verbose=2,
+                            )
+
+                            y_pred = model.predict(
+                                test_inputs,
+                                batch_size=batch_size,
+                            )
+                            y_pred = np.array(y_pred).reshape(-1)
+                            try:
+                                fpr, tpr, _ = metrics.roc_curve(
+                                    y_test,
+                                    y_pred,
+                                    pos_label=1,
+                                )
+                                auc = metrics.auc(fpr, tpr)
+                                print(auc)
+                                pd_init[f'fold{fold}_auc'] = auc
+                                pd_init[f'fold{fold}_tpr'] = [tpr]
+                                pd_init[f'fold{fold}_fpr'] = [fpr]
+                                pd_init[f'fold{fold}_y_test'] = [y_test]
+                                pd_init[f'fold{fold}_y_pred'] = [y_pred]
+
+                                out_dict[f'fold{fold}_auc'] = auc
+                                out_dict[f'fold{fold}_tpr'] = [tpr]
+                                out_dict[f'fold{fold}_fpr'] = [fpr]
+                                out_dict[f'fold{fold}_y_test'] = [y_test]
+                                out_dict[f'fold{fold}_y_pred'] = [y_pred]
+                                out_dict[f'fold{fold}_y_pred'] = [y_pred]
+                            except KeyError:
+                                try:
+                                    fpr, tpr, _ = metrics.roc_curve(
+                                        y_test,
+                                        y_pred,
+                                        pos_label=1,
+                                    )
+                                    auc = metrics.auc(fpr, tpr)
+                                    print(auc)
+                                    pd_init[f'fold{fold}_auc'] = auc
+                                    pd_init[f'fold{fold}_tpr'] = [tpr]
+                                    pd_init[f'fold{fold}_fpr'] = [fpr]
+                                    pd_init[f'fold{fold}_y_test'] = y_test
+                                    pd_init[f'fold{fold}_y_pred'] = y_pred
+
+                                    out_dict[f'fold{fold}_auc'] = auc
+                                    out_dict[f'fold{fold}_tpr'] = [tpr]
+                                    out_dict[f'fold{fold}_fpr'] = [fpr]
+                                    out_dict[f'fold{fold}_y_test'] = y_test
+                                    out_dict[f'fold{fold}_y_pred'] = y_pred
+                                except KeyError as e:
+                                    raise e
+
+                        pd_init['avg_auc'] = 0
+                        out_dict['avg_auc'] = 0
+                        for i in range(num_folds):
+                            pd_init['avg_auc'] += pd_init[f'fold{i}_auc']
+                            out_dict['avg_auc'] += out_dict[f'fold{i}_auc']
+                        pd_init['avg_auc'] /= num_folds
+                        out_dict['avg_auc'] /= num_folds
+
+                        pd_init['std_auc'] = 0
+                        out_dict['std_auc'] = 0
+                        for i in range(0, num_folds):
+                            pd_init['std_auc'] += (
+                                pd_init[f'fold{i}_auc'] -
+                                pd_init['avg_auc']
+                            )**2
+                            out_dict['std_auc'] += (
+                                out_dict[f'fold{i}_auc'] - out_dict['avg_auc']
+                            )**2
+                        pd_init['std_auc'] = (pd_init['std_auc'] / num_folds)**(1 / 2)
+                        out_dict['std_auc'] = (out_dict['std_auc'] / num_folds)**(1 / 2)
+                        csv_save_path = f'{save_dir}{model_prefix}_tuning_dropout_{drop}_seqlen_{seq}_{split_criterion}_text_sequence_{label}.csv'  # noqa: E501
+                        joblib_save_path = csv_save_path.replace('.csv', '.joblib')
+                        if save_csv:
+                            pd_init.to_csv(csv_save_path, index=None)
+                        if save_joblib:
+                            joblib.dump(out_dict, joblib_save_path, compress=3, protocol=2)
+                        print('mean auc: ' + str(pd_init['avg_auc']))
+
+
+
+
+            
+            
+            
 
 def convert_string_to_boolean(input_string):
     if input_string == 'True':
@@ -523,6 +824,7 @@ def main():
     parser.add_argument('-save_dir', '--save_dir', type=str, default='True')
     parser.add_argument('-seq_len', '--seq_len', type=int, default=50)
     parser.add_argument('-dropout', '--dropout', type=float, default=0.3)
+    parser.add_argument('-tuning', '--tuning', type=bool, default=False)
 
     
 
@@ -531,14 +833,9 @@ def main():
     save_dir = args.save_dir
     input_shape = args.seq_len
     dropout = args.dropout
+    tuning = args.tuning
 
-    # select graphic card
-    # os.environ['CUDA_VISIBLE_DEVICES'] = str(0)
-    # os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-    # config = tf.compat.v1.ConfigProto(log_device_placement=True)
-    # config.gpu_options.per_process_gpu_memory_fraction = 0.5
-    # config.gpu_options.allow_growth = True
-    # tf_session = tf.compat.v1.Session(config=config)  # noqa: F841
+
 
     normalize_flag = False
     use_gaze_entropy_features = True
@@ -573,19 +870,7 @@ def main():
         'dependency_distance',
     ]
 
-    # unique_content_word_list = list(
-    #     np.unique(list(feature_extraction.content_word_dict.values())),
-    # )
-    # for content_word in unique_content_word_list:
-    #     feature_names_per_word.append('is_content_word_' + content_word)
 
-    # unique_reduced_pos_list = list(
-    #     np.unique(list(feature_extraction.reduced_pos_dict.values())),
-    # )
-    # for r_pos in unique_reduced_pos_list:
-    #     feature_names_per_word.append('is_reduced_pos_' + r_pos)
-
-    # feature_names_per_word += ['x_mean', 'y_mean']
 
     # train models
     tf.keras.backend.clear_session()
@@ -596,6 +881,7 @@ def main():
         model_name=model_name,
         input_shape = input_shape,
         dropout = dropout,
+        tuning = tuning,
         # flag_sequence_bilstm=flag_sequence_bilstm,
         # word_in_fixation_order=word_in_fixation_order,
         # use_reduced_pos_sequence=use_reduced_pos_sequence,
