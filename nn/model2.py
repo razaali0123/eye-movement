@@ -186,9 +186,15 @@ def train_nn(
     save_joblib=False,
 ):
     tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+    final_df = {}
+    final_df['seq_len'] = []
+    final_df['dropout'] = []
+    final_df['label'] = []
+    final_df['split_criterion'] = []
     
     for split_criterion in spit_criterions:
         for label in labels:
+
             # model_prefix = str(flag_sequence_bilstm) +\
             #     '_' + str(word_in_fixation_order) +\
             #     '_' + str(use_reduced_pos_sequence) +\
@@ -230,6 +236,8 @@ def train_nn(
             out_dict = dict()
 
             pd_init['ahn_baseline'] = [model_name]
+
+
 
             if tuning != True:
 
@@ -513,12 +521,20 @@ def train_nn(
                 hyper = {"seq_len_list": [75, 100],
                          "dropout_list": [0.3, 0.5]}
                 
+                
+                
                 for seq in hyper['seq_len_list']:
                     for drop in hyper['dropout_list']:
+                        final_df['dropout'].append(drop)
+                        final_df['seq_len'].append(seq)
+                        final_df['label'].append(label)
+                        final_df['split_criterion'].append(split_criterion)
 
                         for fold in range(num_folds):
                             np.random.seed(fold)
                             random.seed(fold)
+
+
                             # collect the inputs for train, validation and test
                             # use only features where flag is True
                             train_inputs = []
@@ -793,6 +809,10 @@ def train_nn(
                             )**2
                         pd_init['std_auc'] = (pd_init['std_auc'] / num_folds)**(1 / 2)
                         out_dict['std_auc'] = (out_dict['std_auc'] / num_folds)**(1 / 2)
+                        
+                        final_df['avg_auc'] = pd_init['avg_auc']
+                        final_df['std_auc'] = pd_init['std_auc']
+
                         csv_save_path = f'{save_dir}{model_prefix}_tuning_dropout_{drop}_seqlen_{seq}_{split_criterion}_text_sequence_{label}.csv'  # noqa: E501
                         joblib_save_path = csv_save_path.replace('.csv', '.joblib')
                         if save_csv:
@@ -800,6 +820,11 @@ def train_nn(
                         if save_joblib:
                             joblib.dump(out_dict, joblib_save_path, compress=3, protocol=2)
                         print('mean auc: ' + str(pd_init['avg_auc']))
+
+
+
+    print("Saving the final results ...")
+    pd.DataFrame(final_df).to_csv(f"{save_dir}")
 
 
 
