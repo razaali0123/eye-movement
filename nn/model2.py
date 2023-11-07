@@ -169,6 +169,8 @@ def train_nn(
     input_shape,
     dropout,
     tuning,
+    seq_list,
+    dropout_list,
     # flag_sequence_bilstm=True,
     # word_in_fixation_order=True,
     # use_reduced_pos_sequence=True,
@@ -518,8 +520,8 @@ def train_nn(
                 print('mean auc: ' + str(pd_init['avg_auc']))
                 
             else:
-                hyper = {"seq_len_list": [75, 100],
-                         "dropout_list": [0.3, 0.5]}
+                hyper = {"seq_len_list": seq_list,
+                         "dropout_list": dropout_list}
                 
                 
                 
@@ -851,6 +853,19 @@ def main():
     parser.add_argument('-dropout', '--dropout', type=float, default=0.3)
     parser.add_argument('-tuning', '--tuning', type=bool, default=False)
 
+    parser.add_argument(
+    "-seq_len_list",  # name on the CLI - drop the `--` for positional/required parameters
+    nargs="*",  # 0 or more values expected => creates a list
+    type=int,
+    default=[50, 75, 100],  # default if nothing is provided
+    )
+    parser.add_argument(
+    "-dropout_list",
+    nargs="*",
+    type=float,  # any type/callable can be used here
+    default=[0.1,0.3,0.5],
+    )
+
     
 
     args = parser.parse_args()
@@ -859,6 +874,8 @@ def main():
     input_shape = args.seq_len
     dropout = args.dropout
     tuning = args.tuning
+    seq_list = args.seq_len_list
+    dropout_list = args.dropout_list
 
 
 
@@ -907,6 +924,8 @@ def main():
         input_shape = input_shape,
         dropout = dropout,
         tuning = tuning,
+        seq_list = seq_list,
+        dropout_list = dropout_list,
         # flag_sequence_bilstm=flag_sequence_bilstm,
         # word_in_fixation_order=word_in_fixation_order,
         # use_reduced_pos_sequence=use_reduced_pos_sequence,
