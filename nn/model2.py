@@ -187,7 +187,7 @@ def train_nn(
     save_csv=True,
     save_joblib=False,
 ):
-    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+    # tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
     final_df = {}
     final_df['seq_len'] = []
     final_df['dropout'] = []
@@ -857,13 +857,13 @@ def main():
     "-seq_len_list",  # name on the CLI - drop the `--` for positional/required parameters
     nargs="*",  # 0 or more values expected => creates a list
     type=int,
-    default=[50, 75, 100],  # default if nothing is provided
+    default=[50, 100],  # default if nothing is provided
     )
     parser.add_argument(
     "-dropout_list",
     nargs="*",
     type=float,  # any type/callable can be used here
-    default=[0.1,0.3,0.5],
+    default=[0.1,0.4],
     )
 
     
