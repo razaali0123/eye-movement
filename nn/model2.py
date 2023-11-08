@@ -27,7 +27,7 @@ from tensorflow.keras.layers import LSTM
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
-from transformers import AutoTokenizer, TFDistilBertForSequenceClassification
+
 
 
 # from keras.models import Sequential
@@ -72,6 +72,11 @@ def get_nn_model(dropout, x_train, input_shape):
     lstm_input = tf.keras.Input(shape=( input_shape,),dtype='float32')
     embeddings = tf.keras.layers.Embedding(1000, 64, input_length=input_shape)(lstm_input)
 
+
+    fixation_input = tf.keras.Input(shape=(input_shape, x_train.shape[2]),dtype='float32')
+    concat = tf.keras.layers.concatenate([fixation_input, embeddings], axis  = 2, name = 'concat')
+    lstm = Bidirectional(LSTM(256, dropout=dropout_rate,  return_sequences=True))(concat)
+    lstm = Bidirectional(LSTM(128, dropout=dropout_rate))(lstm)
     # transformer_input = tf.keras.Input(shape=(input_shape, 768),dtype='float32')
     # # att = tf.keras.Input(shape=(input_shape,),dtype='int32')
 
@@ -104,7 +109,7 @@ def get_nn_model(dropout, x_train, input_shape):
 
     ## Now dense continues
 
-    output = tf.keras.layers.Dense(128,activation='relu')(embeddings)
+    output = tf.keras.layers.Dense(128,activation='relu')(lstm)
 
     output = tf.keras.layers.Dropout(dropout_rate)(output)
 
@@ -117,7 +122,7 @@ def get_nn_model(dropout, x_train, input_shape):
     output = tf.keras.layers.Dropout(dropout_rate)(output)
 
     output = tf.keras.layers.Dense(1 ,activation='sigmoid')(output)
-    model = tf.keras.models.Model(inputs = lstm_input,outputs = output)
+    model = tf.keras.models.Model(inputs = [lstm_input, fixation_input],outputs = output)
     # model.compile(Adam(lr=6e-6), loss='binary_crossentropy', metrics=['accuracy'])
     # for i in model.layers:
     #     if (i.name.startswith('tf_distil')):
