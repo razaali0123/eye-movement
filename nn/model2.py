@@ -69,11 +69,13 @@ def get_nn_model(dropout, x_train, input_shape):
     dropout_rate = dropout
 
     # input_shape = 100
+    lstm_input = tf.keras.Input(shape=( input_shape,),dtype='float32')
+    embeddings = tf.keras.layers.Embedding(1000, 64, input_length=input_shape)(lstm_input)
 
-    transformer_input = tf.keras.Input(shape=(input_shape, 768),dtype='float32')
-    # att = tf.keras.Input(shape=(input_shape,),dtype='int32')
+    # transformer_input = tf.keras.Input(shape=(input_shape, 768),dtype='float32')
+    # # att = tf.keras.Input(shape=(input_shape,),dtype='int32')
 
-    lstm_input = tf.keras.Input(shape=(input_shape, x_train.shape[2]),dtype='float32')
+    # lstm_input = tf.keras.Input(shape=(input_shape, x_train.shape[2]),dtype='float32')
 
     # lstm = Bidirectional(LSTM(16, dropout=0.2)(lstm)
     # lstm = Bidirectional(LSTM(3, dropout=0.2)(lstm)
@@ -85,12 +87,12 @@ def get_nn_model(dropout, x_train, input_shape):
     # n = len(output)
     # lst = [output[o] for o in range(n)]
     # concat_transformer = tf.keras.layers.concatenate(lst, axis  = 2, name = 'concat_transformer')
-    concat = tf.keras.layers.concatenate([transformer_input, lstm_input], axis  = 2, name = 'concat')
-    # output = tf.keras.layers.Flatten()(output)
-    ## lstm addition
-    # lstm = Bidirectional(LSTM(256, dropout=0.1, return_sequences=True))(lstm_input)
-    lstm = Bidirectional(LSTM(256, dropout=dropout_rate,  return_sequences=True))(concat)
-    lstm = Bidirectional(LSTM(128, dropout=dropout_rate))(lstm)
+    # concat = tf.keras.layers.concatenate([transformer_input, lstm_input], axis  = 2, name = 'concat')
+    # # output = tf.keras.layers.Flatten()(output)
+    # ## lstm addition
+    # # lstm = Bidirectional(LSTM(256, dropout=0.1, return_sequences=True))(lstm_input)
+    # lstm = Bidirectional(LSTM(256, dropout=dropout_rate,  return_sequences=True))(concat)
+    # lstm = Bidirectional(LSTM(128, dropout=dropout_rate))(lstm)
 
     # output_lstm = tf.keras.layers.Dense(64,activation='relu')(lstm)
     # output_lstm = tf.keras.layers.Dense(3,activation='softmax')(lstm)
@@ -102,7 +104,7 @@ def get_nn_model(dropout, x_train, input_shape):
 
     ## Now dense continues
 
-    output = tf.keras.layers.Dense(128,activation='relu')(lstm)
+    output = tf.keras.layers.Dense(128,activation='relu')(embeddings)
 
     output = tf.keras.layers.Dropout(dropout_rate)(output)
 
@@ -115,13 +117,13 @@ def get_nn_model(dropout, x_train, input_shape):
     output = tf.keras.layers.Dropout(dropout_rate)(output)
 
     output = tf.keras.layers.Dense(1 ,activation='sigmoid')(output)
-    model = tf.keras.models.Model(inputs = [transformer_input, lstm_input],outputs = output)
+    model = tf.keras.models.Model(inputs = lstm_input,outputs = output)
     # model.compile(Adam(lr=6e-6), loss='binary_crossentropy', metrics=['accuracy'])
-    for i in model.layers:
-        if (i.name.startswith('tf_distil')):
-            i.trainable = False
-        else:
-            i.trainable = True
+    # for i in model.layers:
+    #     if (i.name.startswith('tf_distil')):
+    #         i.trainable = False
+    #     else:
+    #         i.trainable = True
     model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), metrics= ['AUC', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
         
     return model

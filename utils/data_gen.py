@@ -260,9 +260,13 @@ def data_gen(seq_length, scale, preprocess_text):
 
 
 
+    from keras.preprocessing.text import Tokenizer
+    tokenizer = Tokenizer()
+    tokenizer.fit_on_texts(new_word_df.text) 
+    new_word_df = np.array(tokenizer.texts_to_sequences(new_word_df.text))
 
-    new_word_df = words_to_token_df(data = new_word_df, maximum_length = seq_length)
-    new_word_df = input_id_to_embeddings(new_word_df, seq_length)
+    # new_word_df = words_to_token_df(data = new_word_df, maximum_length = seq_length)
+    # new_word_df = input_id_to_embeddings(new_word_df, seq_length)
 
 
 
