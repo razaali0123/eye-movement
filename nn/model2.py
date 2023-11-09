@@ -562,9 +562,9 @@ def train_nn(
                                 y_train_path, allow_pickle=True,
                             )
                             x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
-                            x_train_fix_all = x_train_fix_all.astype("float")
+                            # x_train_fix_all = x_train_fix_all.astype("float")
 
-                            x_train_fix_all = x_train_fix_all[:, :seq, :]
+                            x_train_fix_all = x_train_fix_all[:, :seq]
                             x_train_all = x_train_all[:, :seq, :]
                             # x_train_fix_all = tf.cast(x_train_fix_all, tf.float32)
                             
@@ -639,8 +639,8 @@ def train_nn(
                             y_val = y_train_all[val_idx]
 
                             
-                            xtr_words = x_train_fix_all[train_idx, :, :]
-                            val_words = x_train_fix_all[val_idx, :, :]
+                            xtr_words = x_train_fix_all[train_idx, :]
+                            val_words = x_train_fix_all[val_idx, :]
                             # y_train_all[val_idx]
 
                             y_train = np.array(y_train[:, label_dict[label]], dtype=int)
@@ -686,7 +686,7 @@ def train_nn(
                             x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype(float)
                             x_test_fix_all = tf.cast(x_test_fix_all, tf.float32)
 
-                            x_test_fix_all = x_test_fix_all[:, :seq, :]
+                            x_test_fix_all = x_test_fix_all[:, :seq]
                             x_test_all = x_test_all[:, :seq, :]
                             # x_test_fix_postions = x_test_fix_all[:, :, 4]
                             # x_test_fix_all = pd.DataFrame(x_test_fix_all, columns = ['text_list', 'text'])
