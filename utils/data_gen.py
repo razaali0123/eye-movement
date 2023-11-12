@@ -59,8 +59,8 @@ def words_to_token_df(data, maximum_length):
       if cnt_words < maximum_length:
         en = tokenizer.encode_plus(word, return_attention_mask=True)
         sent_tokens_len.append(len(en.input_ids)-2)
-        sent_tokens += en.input_ids[1:-1]
-        sent_att += en.attention_mask[1:-1]
+        sent_tokens += en.input_ids[1]
+        sent_att += en.attention_mask[1]
       else:
         break
 
@@ -262,7 +262,7 @@ def data_gen(seq_length, scale, preprocess_text):
 
 
     new_word_df = words_to_token_df(data = new_word_df, maximum_length = seq_length)
-    new_word_df = input_id_to_embeddings(new_word_df, seq_length)
+    # new_word_df = input_id_to_embeddings(new_word_df, seq_length)
 
 
 
