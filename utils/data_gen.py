@@ -59,8 +59,8 @@ def words_to_token_df(data, maximum_length):
       if cnt_words < maximum_length:
         en = tokenizer.encode_plus(word, return_attention_mask=True)
         sent_tokens_len.append(len(en.input_ids)-2)
-        sent_tokens += en.input_ids[1]
-        sent_att += en.attention_mask[1]
+        sent_tokens += [en.input_ids[1]]
+        sent_att += [en.attention_mask[1]]
       else:
         break
 
@@ -75,7 +75,12 @@ def words_to_token_df(data, maximum_length):
     total_encodings.append(sent_tokens)
     total_att.append(sent_att)
 
-  return pd.DataFrame({'mask_len': mask_len, "total_encodings": total_encodings, "total_att":total_att})
+  id_att = np.zeros(shape= (2, len(data.text), maximum_length))
+  id_att[0,:,:] = np.array(total_encodings)
+  id_att[1,:,:] = np.array(total_att)
+
+  return id_att
+  # return pd.DataFrame({'mask_len': mask_len, "total_encodings": total_encodings, "total_att":total_att})
 
 
 def remove_punctuation(text):
