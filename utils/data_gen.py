@@ -75,9 +75,9 @@ def words_to_token_df(data, maximum_length):
     total_encodings.append(sent_tokens)
     total_att.append(sent_att)
 
-  id_att = np.zeros(shape= (2, len(data.text), maximum_length))
-  id_att[0,:,:] = np.array(total_encodings)
-  id_att[1,:,:] = np.array(total_att)
+  id_att = np.zeros(shape= (len(data.text), maximum_length*2))
+  id_att[:,:maximum_length] = np.array(total_encodings)
+  id_att[:,maximum_length:] = np.array(total_att)
 
   return id_att
   # return pd.DataFrame({'mask_len': mask_len, "total_encodings": total_encodings, "total_att":total_att})
