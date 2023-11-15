@@ -337,9 +337,13 @@ def train_nn(
                     x_val = x_train_all[val_idx]
                     y_val = y_train_all[val_idx]
 
-                    
-                    xtr_words = x_train_fix_all[train_idx, :, :]
-                    val_words = x_train_fix_all[val_idx, :, :]
+                    n = x_train_fix_all.shape[1]/2
+                    xtr_words_id = x_train_fix_all[train_idx, :n]
+                    xtr_words_att = x_train_fix_all[train_idx, :n]
+
+                    val_words_id = x_train_fix_all[val_idx, :n]
+                    val_words_att = x_train_fix_all[val_idx, n:]
+
                     # y_train_all[val_idx]
 
                     y_train = np.array(y_train[:, label_dict[label]], dtype=int)
@@ -348,7 +352,9 @@ def train_nn(
                     # val_input_ids, val_attention_masks = transformer_encode(val_words.reset_index(drop = True), input_shape, tokenizer)
                     
                     
-                    train_inputs.append(xtr_words)
+                    train_inputs.append(xtr_words_id)
+                    train_inputs.append(xtr_words_att)
+
                     train_inputs.append(x_train)
 
                     
@@ -357,7 +363,9 @@ def train_nn(
                     # train_inputs.append(x_train)
                     
 
-                    val_inputs.append(val_words)
+                    val_inputs.append(val_words_id)
+                    val_inputs.append(val_words_att)
+
                     val_inputs.append(x_val)
                     # val_inputs.append(val_input_ids)
                     # val_inputs.append(val_attention_masks)
@@ -384,13 +392,19 @@ def train_nn(
                     )
                     x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype(float)
                     x_test_fix_all = tf.cast(x_test_fix_all, tf.float32)
+
+                    x_test_fix_all_id = x_test_fix_all[:, :n]
+                    x_test_fix_all_att = x_test_fix_all[:, n:]
+
                     # x_test_fix_postions = x_test_fix_all[:, :, 4]
                     # x_test_fix_all = pd.DataFrame(x_test_fix_all, columns = ['text_list', 'text'])
                     # test_input_ids, test_attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), input_shape, tokenizer)
                     # test_inputs.append(test_input_ids)
                     # test_inputs.append(test_attention_masks)
                     # test_inputs.append(x_test_all)
-                    test_inputs.append(x_test_fix_all)
+                    test_inputs.append(x_test_fix_all_id)
+                    test_inputs.append(x_test_fix_all_att)
+
                     test_inputs.append(x_test_all)
 
 
@@ -557,7 +571,11 @@ def train_nn(
                             x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
                             x_train_fix_all = x_train_fix_all.astype("float")
 
-                            x_train_fix_all = x_train_fix_all[:, :seq, :]
+                            ii = [False]*x_train_fix_all.shape[0]
+                            ii[:seq] = [True] * seq
+                            ii[-seq:] = [True] * seq
+                            x_train_fix_all = x_train_fix_all[:,ii]
+
                             x_train_all = x_train_all[:, :seq, :]
                             # x_train_fix_all = tf.cast(x_train_fix_all, tf.float32)
                             
@@ -631,9 +649,15 @@ def train_nn(
                             x_val = x_train_all[val_idx]
                             y_val = y_train_all[val_idx]
 
+                            n = x_train_fix_all.shape[1]/2
+                            xtr_words_id = x_train_fix_all[train_idx, :n]
+                            xtr_words_att = x_train_fix_all[train_idx, :n]
+
                             
-                            xtr_words = x_train_fix_all[train_idx, :, :]
-                            val_words = x_train_fix_all[val_idx, :, :]
+                            # xtr_words = x_train_fix_all[train_idx, :, :]
+                            val_words_id = x_train_fix_all[val_idx, :n]
+                            val_words_att = x_train_fix_all[val_idx, n:]
+
                             # y_train_all[val_idx]
 
                             y_train = np.array(y_train[:, label_dict[label]], dtype=int)
@@ -642,7 +666,9 @@ def train_nn(
                             # val_input_ids, val_attention_masks = transformer_encode(val_words.reset_index(drop = True), input_shape, tokenizer)
                             
                             
-                            train_inputs.append(xtr_words)
+                            train_inputs.append(xtr_words_id)
+                            train_inputs.append(xtr_words_att)
+
                             train_inputs.append(x_train)
 
                             
@@ -651,7 +677,9 @@ def train_nn(
                             # train_inputs.append(x_train)
                             
 
-                            val_inputs.append(val_words)
+                            val_inputs.append(val_words_id)
+                            val_inputs.append(val_words_att)
+
                             val_inputs.append(x_val)
                             # val_inputs.append(val_input_ids)
                             # val_inputs.append(val_attention_masks)
