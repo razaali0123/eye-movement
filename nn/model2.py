@@ -70,8 +70,8 @@ def get_nn_model(dropout, x_train, input_shape):
 
     # input_shape = 100
 
-    transformer_input_id = tf.keras.Input(shape=(input_shape,),dtype='float32')
-    transformer_input_att = tf.keras.Input(shape=(input_shape,),dtype='float32')
+    transformer_input_id = tf.keras.Input(shape=(input_shape,),dtype='int32')
+    transformer_input_att = tf.keras.Input(shape=(input_shape,),dtype='int32')
 
     # att = tf.keras.Input(shape=(input_shape,),dtype='int32')
 
@@ -117,7 +117,7 @@ def get_nn_model(dropout, x_train, input_shape):
     output = tf.keras.layers.Dropout(dropout_rate)(output)
 
     output = tf.keras.layers.Dense(1 ,activation='sigmoid')(output)
-    model = tf.keras.models.Model(inputs = [transformer_input, lstm_input],outputs = output)
+    model = tf.keras.models.Model(inputs = [transformer_input_id,transformer_input_att, lstm_input],outputs = output)
     # model.compile(Adam(lr=6e-6), loss='binary_crossentropy', metrics=['accuracy'])
     for i in model.layers:
         if (i.name.startswith('tf_distil')):
@@ -266,7 +266,7 @@ def train_nn(
                         y_train_path, allow_pickle=True,
                     )
                     x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
-                    x_train_fix_all = x_train_fix_all.astype("float")
+                    x_train_fix_all = x_train_fix_all.astype("int32")
                     # x_train_fix_all = tf.cast(x_train_fix_all, tf.float32)
                     
                     # x_train_fix_all = pd.DataFrame(x_train_fix_all, columns = ['text_list', 'text'])
@@ -392,7 +392,7 @@ def train_nn(
                     x_test_all, y_test_all = np.load(X_test_path).astype(float), np.load(
                         y_test_path, allow_pickle=True,
                     )
-                    x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype(float)
+                    x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype("int32")
                     x_test_fix_all = tf.cast(x_test_fix_all, tf.float32)
 
                     x_test_fix_all_id = x_test_fix_all[:, :n]
@@ -571,9 +571,9 @@ def train_nn(
                                 y_train_path, allow_pickle=True,
                             )
                             x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
-                            x_train_fix_all = x_train_fix_all.astype("float")
+                            x_train_fix_all = x_train_fix_all.astype("int32")
 
-                            ii = [False]*x_train_fix_all.shape[0]
+                            ii = [False]*x_train_fix_all.shape[1]
                             ii[:seq] = [True] * seq
                             ii[-seq:] = [True] * seq
                             x_train_fix_all = x_train_fix_all[:,ii]
@@ -651,7 +651,7 @@ def train_nn(
                             x_val = x_train_all[val_idx]
                             y_val = y_train_all[val_idx]
 
-                            n = x_train_fix_all.shape[1]/2
+                            n = int(x_train_fix_all.shape[1]/2)
                             xtr_words_id = x_train_fix_all[train_idx, :n]
                             xtr_words_att = x_train_fix_all[train_idx, :n]
 
@@ -706,10 +706,11 @@ def train_nn(
                             x_test_all, y_test_all = np.load(X_test_path).astype(float), np.load(
                                 y_test_path, allow_pickle=True,
                             )
-                            x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype(float)
-                            x_test_fix_all = tf.cast(x_test_fix_all, tf.float32)
+                            x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype("int32")
+                            # x_test_fix_all = tf.cast(x_test_fix_all, tf.float32)
+                            x_test_fix_all = x_test_fix_all.astype("int32")
 
-                            x_test_fix_all = x_test_fix_all[:, :seq, :]
+                            x_test_fix_all = x_test_fix_all[:, ii]
                             x_test_all = x_test_all[:, :seq, :]
                             # x_test_fix_postions = x_test_fix_all[:, :, 4]
                             # x_test_fix_all = pd.DataFrame(x_test_fix_all, columns = ['text_list', 'text'])
