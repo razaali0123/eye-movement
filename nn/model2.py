@@ -63,14 +63,16 @@ def whole_book_analysis(book_list, df_cognitive):
 def get_nn_model(dropout, x_train, input_shape):
     # df_cognitive = pd.read_csv("/home/raza/repo/etra-reading-comprehension/SB-SAT/fixation/df_cognitive.csv")
     
-    # distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
+    distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
 
 
     dropout_rate = dropout
 
     # input_shape = 100
 
-    transformer_input = tf.keras.Input(shape=(input_shape, 768),dtype='float32')
+    transformer_input_id = tf.keras.Input(shape=(input_shape,),dtype='float32')
+    transformer_input_att = tf.keras.Input(shape=(input_shape,),dtype='float32')
+
     # att = tf.keras.Input(shape=(input_shape,),dtype='int32')
 
     lstm_input = tf.keras.Input(shape=(input_shape, x_train.shape[2]),dtype='float32')
@@ -80,12 +82,12 @@ def get_nn_model(dropout, x_train, input_shape):
 
 
 
-    # output = distill_model([ids,att])
-    # output = output.hidden_states
+    output = distill_model([transformer_input_id,transformer_input_att])
+    output = output.hidden_states[-1]
     # n = len(output)
     # lst = [output[o] for o in range(n)]
     # concat_transformer = tf.keras.layers.concatenate(lst, axis  = 2, name = 'concat_transformer')
-    concat = tf.keras.layers.concatenate([transformer_input, lstm_input], axis  = 2, name = 'concat')
+    concat = tf.keras.layers.concatenate([output, lstm_input], axis  = 2, name = 'concat')
     # output = tf.keras.layers.Flatten()(output)
     ## lstm addition
     # lstm = Bidirectional(LSTM(256, dropout=0.1, return_sequences=True))(lstm_input)
