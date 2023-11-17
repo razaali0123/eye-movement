@@ -341,7 +341,7 @@ def train_nn(
 
                     n = x_train_fix_all.shape[1]/2
                     xtr_words_id = x_train_fix_all[train_idx, :n]
-                    xtr_words_att = x_train_fix_all[train_idx, :n]
+                    xtr_words_att = x_train_fix_all[train_idx, n:]
 
                     val_words_id = x_train_fix_all[val_idx, :n]
                     val_words_att = x_train_fix_all[val_idx, n:]
@@ -653,7 +653,7 @@ def train_nn(
 
                             n = int(x_train_fix_all.shape[1]/2)
                             xtr_words_id = x_train_fix_all[train_idx, :n]
-                            xtr_words_att = x_train_fix_all[train_idx, :n]
+                            xtr_words_att = x_train_fix_all[train_idx, n:]
 
                             
                             # xtr_words = x_train_fix_all[train_idx, :, :]
@@ -718,7 +718,13 @@ def train_nn(
                             # test_inputs.append(test_input_ids)
                             # test_inputs.append(test_attention_masks)
                             # test_inputs.append(x_test_all)
-                            test_inputs.append(x_test_fix_all)
+
+                            n = int(x_test_fix_all.shape[1]/2)
+                            xte_words_id = x_test_fix_all[train_idx, :n]
+                            xte_words_att = x_test_fix_all[train_idx, n:]
+                            test_inputs.append(xte_words_id)
+                            test_inputs.append(xte_words_att)
+
                             test_inputs.append(x_test_all)
 
 
