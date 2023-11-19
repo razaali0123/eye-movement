@@ -573,9 +573,11 @@ def train_nn(
                             x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
                             x_train_fix_all = x_train_fix_all.astype("int32")
 
+                            n = int(x_train_fix_all.shape[1]/2)
+
                             ii = [False]*x_train_fix_all.shape[1]
                             ii[:seq] = [True] * seq
-                            ii[-seq:] = [True] * seq
+                            ii[n:n+seq]= [True] * seq
                             x_train_fix_all = x_train_fix_all[:,ii]
 
                             x_train_all = x_train_all[:, :seq, :]
