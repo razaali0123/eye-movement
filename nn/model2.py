@@ -722,8 +722,8 @@ def train_nn(
                             # test_inputs.append(x_test_all)
 
                             n = int(x_test_fix_all.shape[1]/2)
-                            xte_words_id = x_test_fix_all[train_idx, :n]
-                            xte_words_att = x_test_fix_all[train_idx, n:]
+                            xte_words_id = x_test_fix_all[:, :n]
+                            xte_words_att = x_test_fix_all[:, n:]
                             test_inputs.append(xte_words_id)
                             test_inputs.append(xte_words_att)
 
