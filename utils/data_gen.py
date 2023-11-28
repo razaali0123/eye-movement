@@ -47,39 +47,58 @@ def input_id_to_embeddings(df, maximum_length):
 
 
 def words_to_token_df(data, maximum_length):
-  total_att = []
+  # total_att = []
 
-  mask_len = []
-  total_encodings = []
+  # mask_len = []
+  # total_encodings = []
+  word_id_lst = []
+  sent_tokens = []
+  sent_att = []
   for i in range(len(data.text)):
-    sent_tokens_len = []
-    sent_tokens = []
-    sent_att = []
-    for cnt_words, word in enumerate(data.text.iloc[i].split()):
-      if cnt_words < maximum_length:
-        en = tokenizer.encode_plus(word, return_attention_mask=True)
-        sent_tokens_len.append(len(en.input_ids)-2)
-        sent_tokens += [en.input_ids[1]]
-        sent_att += [en.attention_mask[1]]
-      else:
-        break
 
-    if len(sent_tokens_len) < maximum_length:
-      diff = maximum_length - len(sent_tokens_len)
-      sent_tokens += [0]*diff
-      sent_att += [0]*diff
-      sent_tokens_len += [0]*diff
+    en = tokenizer.encode_plus(data.text.iloc[i].split(),
+										add_special_tokens = True,
+										truncation=True,
+										max_length = maximum_length,
+										padding = 'max_length',
+										return_attention_mask=True,
+										is_split_into_words=True)
+    word_id = en.word_ids()
+    word_id = [val if val is not None else np.nan for val in word_id]
+    word_id_lst.append(word_id)
+    sent_tokens.append(en.input_ids)
+    sent_att.append(en.attention_mask)
+  
+  id_att = np.zeros(shape= (len(data.text), maximum_length*3))
+  id_att[:,:maximum_length] = np.array(sent_tokens)
+  id_att[:,maximum_length:2*maximum_length] = np.array(sent_att)
+  id_att[:,maximum_length*2:] = np.array(word_id_lst)
 
-
-    mask_len.append(sent_tokens_len)
-    total_encodings.append(sent_tokens)
-    total_att.append(sent_att)
-
-  id_att = np.zeros(shape= (len(data.text), maximum_length*2))
-  id_att[:,:maximum_length] = np.array(total_encodings)
-  id_att[:,maximum_length:] = np.array(total_att)
 
   return id_att
+
+
+    # for cnt_words, word in enumerate(data.text.iloc[i].split()):
+    #   if cnt_words < maximum_length:
+    #     en = tokenizer.encode_plus(word, return_attention_mask=True)
+    #     sent_tokens_len.append(len(en.input_ids)-2)
+    #     sent_tokens += [en.input_ids[1]]
+    #     sent_att += [en.attention_mask[1]]
+    #   else:
+    #     break
+
+    # if len(sent_tokens_len) < maximum_length:
+    #   diff = maximum_length - len(sent_tokens_len)
+    #   sent_tokens += [0]*diff
+    #   sent_att += [0]*diff
+    #   sent_tokens_len += [0]*diff
+
+
+    # mask_len.append(sent_tokens_len)
+    # total_encodings.append(sent_tokens)
+    # total_att.append(sent_att)
+
+
   # return pd.DataFrame({'mask_len': mask_len, "total_encodings": total_encodings, "total_att":total_att})
 
 
@@ -267,6 +286,7 @@ def data_gen(seq_length, scale, preprocess_text):
 
 
     new_word_df = words_to_token_df(data = new_word_df, maximum_length = seq_length)
+    
     # new_word_df = input_id_to_embeddings(new_word_df, seq_length)
 
 

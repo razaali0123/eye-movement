@@ -72,6 +72,8 @@ def get_nn_model(dropout, x_train, input_shape):
 
     transformer_input_id = tf.keras.Input(shape=(input_shape,),dtype='int32')
     transformer_input_att = tf.keras.Input(shape=(input_shape,),dtype='int32')
+    transformer_input_mask = tf.keras.Input(shape=(input_shape,),dtype='int32')
+
 
     # att = tf.keras.Input(shape=(input_shape,),dtype='int32')
 
@@ -84,6 +86,14 @@ def get_nn_model(dropout, x_train, input_shape):
 
     output = distill_model([transformer_input_id,transformer_input_att])
     output = output.hidden_states[-1]
+
+
+    merged_word_emb = np.zeros(output.shape)
+    mask = transformer_input_mask
+    for d in range(mask.shape[0]):
+        for word_idx in range(mask.shape[1]):
+            ii = (word_idx == mask[d, :])
+            merged_word_emb[d, word_idx, :] = np.mean(output[d, ii, :], axis=0)
     # n = len(output)
     # lst = [output[o] for o in range(n)]
     # concat_transformer = tf.keras.layers.concatenate(lst, axis  = 2, name = 'concat_transformer')
@@ -117,13 +127,13 @@ def get_nn_model(dropout, x_train, input_shape):
     output = tf.keras.layers.Dropout(dropout_rate)(output)
 
     output = tf.keras.layers.Dense(1 ,activation='sigmoid')(output)
-    model = tf.keras.models.Model(inputs = [transformer_input_id,transformer_input_att, lstm_input],outputs = output)
+    model = tf.keras.models.Model(inputs = [transformer_input_id,transformer_input_att,transformer_input_mask, lstm_input],outputs = output)
     # model.compile(Adam(lr=6e-6), loss='binary_crossentropy', metrics=['accuracy'])
-    for i in model.layers:
-        if (i.name.startswith('tf_distil')):
-            i.trainable = False
-        else:
-            i.trainable = True
+    # for i in model.layers:
+    #     if (i.name.startswith('tf_distil')):
+    #         i.trainable = False
+    #     else:
+    #         i.trainable = True
     model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), metrics= ['AUC', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
         
     return model
@@ -573,11 +583,13 @@ def train_nn(
                             x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
                             x_train_fix_all = x_train_fix_all.astype("int32")
 
-                            n = int(x_train_fix_all.shape[1]/2)
+                            n = int(x_train_fix_all.shape[1]/3)
 
                             ii = [False]*x_train_fix_all.shape[1]
                             ii[:seq] = [True] * seq
                             ii[n:n+seq]= [True] * seq
+                            ii[2*n:2*n+seq]= [True] * seq
+
                             x_train_fix_all = x_train_fix_all[:,ii]
 
                             x_train_all = x_train_all[:, :seq, :]
@@ -653,14 +665,18 @@ def train_nn(
                             x_val = x_train_all[val_idx]
                             y_val = y_train_all[val_idx]
 
-                            n = int(x_train_fix_all.shape[1]/2)
+                            n = int(x_train_fix_all.shape[1]/3)
                             xtr_words_id = x_train_fix_all[train_idx, :n]
-                            xtr_words_att = x_train_fix_all[train_idx, n:]
+                            xtr_words_att = x_train_fix_all[train_idx, n:2*n]
+                            xtr_words_mask = x_train_fix_all[train_idx, 2*n:]
+
 
                             
                             # xtr_words = x_train_fix_all[train_idx, :, :]
                             val_words_id = x_train_fix_all[val_idx, :n]
-                            val_words_att = x_train_fix_all[val_idx, n:]
+                            val_words_att = x_train_fix_all[val_idx, n:2*n]
+                            val_words_mask = x_train_fix_all[val_idx, 2*n:]
+
 
                             # y_train_all[val_idx]
 
@@ -672,6 +688,8 @@ def train_nn(
                             
                             train_inputs.append(xtr_words_id)
                             train_inputs.append(xtr_words_att)
+                            train_inputs.append(xtr_words_mask)
+
 
                             train_inputs.append(x_train)
 
@@ -683,6 +701,8 @@ def train_nn(
 
                             val_inputs.append(val_words_id)
                             val_inputs.append(val_words_att)
+                            val_inputs.append(val_words_mask)
+
 
                             val_inputs.append(x_val)
                             # val_inputs.append(val_input_ids)
@@ -721,11 +741,16 @@ def train_nn(
                             # test_inputs.append(test_attention_masks)
                             # test_inputs.append(x_test_all)
 
-                            n = int(x_test_fix_all.shape[1]/2)
+                            n = int(x_test_fix_all.shape[1]/3)
                             xte_words_id = x_test_fix_all[:, :n]
-                            xte_words_att = x_test_fix_all[:, n:]
+                            xte_words_att = x_test_fix_all[:, n:2*n]
+                            xte_words_mask = x_test_fix_all[:, 2*n:]
+
+
                             test_inputs.append(xte_words_id)
                             test_inputs.append(xte_words_att)
+                            test_inputs.append(xte_words_mask)
+
 
                             test_inputs.append(x_test_all)
 
@@ -865,7 +890,7 @@ def train_nn(
 
 
     print("Saving the final results ...")
-    pd.DataFrame(final_df).to_csv(f"{save_dir}")
+    # pd.DataFrame(final_df).to_csv(f"{save_dir}")
 
 
 
