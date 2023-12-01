@@ -23,14 +23,14 @@ from transformers import AutoTokenizer, TFDistilBertForSequenceClassification
 
 class eye(keras.Model):
 
-    def __init__(self, dropout = 0.1):
+    def __init__(self, dropout = 0.1, max_len = 50):
         super().__init__()
         self.distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
 
 
         self.dropout_rate = dropout
 
-        # self.input_shape = 100
+        self.input_shape = max_len
 
         # self.transformer_input_id = tf.keras.Input(shape=(input_shape,),dtype='int32')
         # self.transformer_input_att = tf.keras.Input(shape=(input_shape,),dtype='int32')
@@ -68,6 +68,7 @@ class eye(keras.Model):
         # model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), metrics= ['AUC', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
 
     def call(self, inputs):
+        merged = []
         output = self.distill_model([inputs[0],inputs[1]])
         output = output.hidden_states[-1]
         # output = np.arange(24).reshape(2,3,4)
@@ -80,12 +81,16 @@ class eye(keras.Model):
 
         merged_word_emb = np.zeros(output.shape)
         # mask = transformer_input_mask
-        for d in range(mask.shape[0]):
-          for word_idx in range(mask.shape[1]):
-            ii = (word_idx == mask[d, :])
-            merged_word_emb[d, word_idx, :] = np.mean(output[d, ii, :], axis=0)
+        for d in range(self.max_len):
+            temp_mask = tf.expand_dims(mask, 2)
+            ii = (mask==d)
+            ii = tf.where(ii, 1., 0.)
+            out = output*ii
+            merged.append(tf.reduce_sum(out, axis = 1))
+        merged_embeddings = tf.stack(merged, axis = 1)
 
-        print(merged_word_emb)
+
+        print("merged embeddings shape ",merged_embeddings.shape)
         concat = tf.keras.layers.concatenate([merged_word_emb, lstm_input], axis  = 2, name = 'concat')
         out = self.lstm1(concat)
         out = self.lstm2(out)

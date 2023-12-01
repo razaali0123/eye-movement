@@ -455,7 +455,7 @@ def train_nn(
 
 
                     # model = get_nn_model(dropout, x_train, input_shape)
-                    model = eye(dropout)
+                    model = eye(dropout, max_len = seq)
                     model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), metrics= ['AUC', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
 
 
@@ -792,7 +792,10 @@ def train_nn(
 
 
 
-                            model = get_nn_model(drop, x_train, seq)
+                            # model = get_nn_model(drop, x_train, seq)
+                            model = eye(dropout, max_len = seq)
+                            model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), metrics= ['AUC', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
+
 
                             tf.keras.backend.clear_session()
                             callbacks = [
