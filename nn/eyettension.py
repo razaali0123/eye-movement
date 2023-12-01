@@ -79,19 +79,19 @@ class eye(keras.Model):
 
 
 
-        merged_word_emb = np.zeros(output.shape)
+        # merged_word_emb = np.zeros(output.shape)
         # mask = transformer_input_mask
         for d in range(self.max_len):
             temp_mask = tf.expand_dims(mask, 2)
-            ii = (mask==d)
+            ii = (temp_mask==d)
             ii = tf.where(ii, 1., 0.)
             out = output*ii
             merged.append(tf.reduce_sum(out, axis = 1))
         merged_embeddings = tf.stack(merged, axis = 1)
 
 
-        print("merged embeddings shape ",merged_embeddings.shape)
-        concat = tf.keras.layers.concatenate([merged_word_emb, lstm_input], axis  = 2, name = 'concat')
+        # print("merged embeddings shape ",merged_embeddings.shape)
+        concat = tf.keras.layers.concatenate([merged_embeddings, lstm_input], axis  = 2, name = 'concat')
         out = self.lstm1(concat)
         out = self.lstm2(out)
         out = self.dense1(out)
