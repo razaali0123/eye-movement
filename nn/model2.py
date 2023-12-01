@@ -28,6 +28,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
 from transformers import AutoTokenizer, TFDistilBertForSequenceClassification
+from eyettension import eye
 
 
 # from keras.models import Sequential
@@ -86,6 +87,7 @@ def get_nn_model(dropout, x_train, input_shape):
 
     output = distill_model([transformer_input_id,transformer_input_att])
     output = output.hidden_states[-1]
+
 
 
     merged_word_emb = np.zeros(output.shape)
@@ -452,7 +454,10 @@ def train_nn(
 
 
 
-                    model = get_nn_model(dropout, x_train, input_shape)
+                    # model = get_nn_model(dropout, x_train, input_shape)
+                    model = eye(dropout)
+                    model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), metrics= ['AUC', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
+
 
                     tf.keras.backend.clear_session()
                     callbacks = [
