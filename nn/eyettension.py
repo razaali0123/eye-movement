@@ -21,7 +21,7 @@ from tensorflow.keras.optimizers import Adam
 
 from transformers import AutoTokenizer, TFDistilBertForSequenceClassification
 
-class eye(keras.Model):
+class eye(tf.keras.Model):
 
     def __init__(self, dropout = 0.1, max_len = 50):
         super().__init__()
@@ -85,8 +85,8 @@ class eye(keras.Model):
             temp_mask = tf.expand_dims(mask, 2)
             ii = (temp_mask==d)
             ii = tf.where(ii, 1., 0.)
-            out = output*ii
-            merged.append(tf.reduce_sum(out, axis = 1))
+            out1 = output*ii
+            merged.append(tf.reduce_sum(out1, axis = 1))
         merged_embeddings = tf.stack(merged, axis = 1)
 
 
