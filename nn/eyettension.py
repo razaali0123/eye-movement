@@ -26,11 +26,13 @@ class eye(tf.keras.Model):
     def __init__(self, dropout = 0.1, max_len = 50):
         super().__init__()
         self.distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
+        for layer in self.distill_model.layers:
+            layer.trainable = True
 
 
         self.dropout_rate = dropout
 
-        self.input_shape = max_len
+        self.max_len = max_len
 
         # self.transformer_input_id = tf.keras.Input(shape=(input_shape,),dtype='int32')
         # self.transformer_input_att = tf.keras.Input(shape=(input_shape,),dtype='int32')
@@ -69,8 +71,8 @@ class eye(tf.keras.Model):
 
     def call(self, inputs):
         merged = []
-        output = self.distill_model([inputs[0],inputs[1]])
-        output = output.hidden_states[-1]
+        _, hidden = self.distill_model([inputs[0],inputs[1]])
+        output = hidden[-1]
         # output = np.arange(24).reshape(2,3,4)
         # print(output)
 
