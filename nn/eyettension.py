@@ -27,7 +27,11 @@ class eye(tf.keras.Model):
         super().__init__()
         self.distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
         for layer in self.distill_model.layers:
-            layer.trainable = True
+            if layer.name.startswith("distilbert"):
+              print("only bert")
+              layer.trainable = True
+            else:
+              layer.trainable = False
 
 
         self.dropout_rate = dropout
