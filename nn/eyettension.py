@@ -71,8 +71,8 @@ class eye(tf.keras.Model):
 
     def call(self, inputs):
         merged = []
-        _, hidden = self.distill_model([inputs[0],inputs[1]])
-        output = hidden[-1]
+        output = self.distill_model([inputs[0],inputs[1]])
+        output = output.hidden_states[-1]
         # output = np.arange(24).reshape(2,3,4)
         # print(output)
 
