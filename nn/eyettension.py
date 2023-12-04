@@ -92,7 +92,7 @@ class eye(tf.keras.Model):
             ii = (temp_mask==d)
             ii = tf.where(ii, 1., 0.)
             out1 = output*ii
-            merged.append(tf.reduce_mean(out1, axis = 1))
+            merged.append(tf.reduce_sum(out1, axis = 1)/self.max_len) ## mean of embeddings
         merged_embeddings = tf.stack(merged, axis = 1)
 
 
