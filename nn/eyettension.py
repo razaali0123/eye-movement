@@ -90,13 +90,15 @@ class eye(tf.keras.Model):
         for d in range(self.max_len):
             temp_mask = tf.expand_dims(mask, 2)
             ii = (temp_mask==d)
-            out1 = tf.ragged.boolean_mask(out, tf.squeeze(
-             ii
-))
-            # ii = tf.where(ii, 1., 0.)
-            # out1 = output*ii
+            
+            ii = tf.where(ii, 1., 0.)
+            out1 = output*ii
+            non_zero_mask = tf.reduce_any(out1 != 0, axis=2)
+            non_zero_count = tf.reduce_sum(tf.cast(non_zero_mask, tf.float32), axis=1)
+            summed_tensor = tf.reduce_sum(tf.cast(a, tf.float32), axis=1)
+            mean_tensor = tf.divide(summed_tensor, tf.expand_dims(non_zero_count, -1))
             # den = tf.math.count_nonzero(out1, axis = 1, dtype = tf.dtypes.float32)
-            merged.append(tf.reduce_mean(out1, axis = 1)) ## mean of embeddings
+            merged.append(mean_tensor) ## mean of embeddings
         merged_embeddings = tf.stack(merged, axis = 1)
 
 
