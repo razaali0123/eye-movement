@@ -98,7 +98,7 @@ class eye(tf.keras.Model):
             den = tf.math.count_nonzero(tf.reduce_sum(out1,axis=2),axis=1, dtype = tf.dtypes.float32)
             den  =  tf.expand_dims(den, 1)
             den = tf.repeat(den, repeats = [768], axis = 1)
-            t = tf.divide(tf.reduce_sum(out1, axis = 1),den)
+            t = tf.math.divide_no_nan(tf.reduce_sum(out1, axis = 1),den)
             merged.append(t)
 
 
