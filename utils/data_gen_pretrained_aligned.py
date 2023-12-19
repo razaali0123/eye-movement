@@ -1,0 +1,292 @@
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from tqdm import tqdm
+
+
+
+import string
+import nltk
+nltk.download('wordnet')
+from nltk.stem import WordNetLemmatizer
+
+from transformers import AutoTokenizer, TFDistilBertForSequenceClassification
+distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
+tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+
+
+def input_id_to_embeddings(df, maximum_length):
+  from tensorflow.python.ops.numpy_ops import np_config
+  np_config.enable_numpy_behavior()
+
+  total_encodings = df.total_encodings
+  total_att = df.total_att
+  mask_len = df.mask_len
+
+
+  cnt_batch = len(total_encodings)
+  final_embeddings = np.zeros((cnt_batch, maximum_length, 768))
+
+  for j in range(cnt_batch):
+
+    i = total_encodings.iloc[j]
+    a = total_att.iloc[j]
+
+    arr = distill_model([np.array(i), np.array(a)]).hidden_states[-1]
+
+    arr = arr.reshape(arr.shape[1], arr.shape[2])
+
+    for cnt, k in enumerate(mask_len.iloc[j]):
+      if k == 1:
+        final_embeddings[j, cnt, :] = arr[cnt, :]
+        continue
+      else:
+        final_embeddings[j, cnt, :] = np.sum(arr[cnt:cnt+k, :], axis = 0)
+
+  return final_embeddings
+
+
+def words_to_token_df(data, maximum_length):
+  word_id_lst=[]
+  sent_tokens=[]
+  sent_att=[]
+  for i in range(len(data.text)):
+    en = tokenizer.encode_plus(data.text.iloc[i].split(),
+                    add_special_tokens = True,
+                    truncation=True,
+                    max_length = 100,
+                    padding = 'max_length',
+                    return_attention_mask=True,
+                    is_split_into_words=True)
+    word_id = en.word_ids()
+    word_id = [val if val is not None else np.nan for val in word_id]
+    word_id_lst.append(word_id)
+    sent_tokens.append(en.input_ids)
+    sent_att.append(en.attention_mask)
+  return pd.DataFrame({'mask_len': word_id_lst, "total_encodings": sent_tokens, "total_att":sent_att})
+# def words_to_token_df(data, maximum_length):
+#   total_att = []
+
+#   mask_len = []
+#   total_encodings = []
+#   for i in range(len(data.text)):
+#     sent_tokens_len = []
+#     sent_tokens = []
+#     sent_att = []
+#     for cnt_words, word in enumerate(data.text.iloc[i].split()):
+#       if cnt_words < maximum_length:
+#         en = tokenizer.encode_plus(word, return_attention_mask=True)
+#         sent_tokens_len.append(len(en.input_ids)-2)
+#         sent_tokens += en.input_ids[1:-1]
+#         sent_att += en.attention_mask[1:-1]
+#       else:
+#         break
+
+#     if len(sent_tokens_len) < maximum_length:
+#       diff = maximum_length - len(sent_tokens_len)
+#       sent_tokens += [0]*diff
+#       sent_att += [0]*diff
+#       sent_tokens_len += [0]*diff
+
+
+#     mask_len.append(sent_tokens_len)
+#     total_encodings.append(sent_tokens)
+#     total_att.append(sent_att)
+
+#   return pd.DataFrame({'mask_len': mask_len, "total_encodings": total_encodings, "total_att":total_att})
+
+
+def remove_punctuation(text):
+    if text is not None:
+      punctuationfree="".join([i for i in text if i not in string.punctuation])
+      return punctuationfree
+    else:
+      return None
+
+def lemmatizer(text):
+    if text is not None:
+      wordnet_lemmatizer = WordNetLemmatizer()
+      lemm_text = " ".join([wordnet_lemmatizer.lemmatize(word) for word in text.split()])
+      return lemm_text
+    else:
+      return None
+
+
+def adding_word_length(x):
+    if pd.isna(x['CURRENT_FIX_INTEREST_AREA_LABEL']):
+        return 0
+    else:
+        return len(x.CURRENT_FIX_INTEREST_AREA_LABEL)
+    
+
+def data_prep(df, sc, seq_len = 200):
+    subj = df.subj.unique()
+    page_book = df.page_name.unique()
+    subj_len = len(subj)
+    a = len(page_book)
+    z = len(subj) * a
+    cols_to_drop = ['pnr',  'book', 'language', 'acc_level', 'subj_acc_level','sac_angle', 'sac_amplitude', 'sac_velcity',
+    'sac_blink', 'native', 'difficulty'] 
+    df = df.drop(cols_to_drop, axis = 1)
+    num_features = df.shape[1]-6 # will remove [acc, subj_acc, subj, page_book, 'word'] + book_name later
+    words = []
+    matrix = np.zeros(shape = (z, seq_len, num_features))
+
+    target_acc = []
+    target_subj_acc = []
+    mask = []
+    label_arr = np.empty((0, sc.shape[1]))
+    
+
+
+    for cnt, pb in enumerate(tqdm(page_book)):
+        for cnt_person, s in enumerate(subj):
+            temp = df[(df.subj == s) & (df.page_name == pb)]
+            tmp_label = sc.loc[
+                sc.subj ==
+                s
+            ].loc[sc.book == pb.split('-')[1]]
+            label_arr = np.vstack([label_arr, tmp_label])
+            if temp.shape[0] == 0:
+                mask.append((None, None, None))
+                target_acc.append(None)
+                target_subj_acc.append(None)
+                words.append(None)
+                continue
+            # temp = temp.sort_values("word_loc")
+            temp = temp.sort_values("word_loc")
+            mask.append((s,temp['book_name'].iloc[0],pb))
+            temp = temp.drop("book_name", axis = 1)
+            
+            temp = temp.groupby(['subj', 'page_name', 'word', 'word_loc'], as_index = False).mean()
+            
+            temp = temp.sort_values("word_loc")
+            
+            target_acc.append(temp['acc'].iloc[0])
+            target_subj_acc.append(temp['subj_acc'].iloc[0])
+            words.append(temp['word'].tolist())
+            temp = temp.drop(['acc', 'subj_acc', 'page_name', 'subj', 'word'], axis = 1)
+            if temp.shape[0] >= seq_len:
+                temp = (temp.iloc[:seq_len, :]).to_numpy()
+                words[-1] = words[-1][:seq_len]
+            else:
+                diff = seq_len - temp.shape[0]
+
+                words[-1] = words[-1] + [' ']*diff
+
+                to_add = np.zeros(shape= (diff, temp.shape[1]))
+
+                temp = temp.to_numpy()
+
+                temp = np.append(temp, to_add, axis=0)
+
+
+            matrix[cnt*subj_len + cnt_person, :, :] = temp
+    return matrix, target_acc, target_subj_acc,  mask, words, label_arr
+
+def data_gen(seq_length, scale, preprocess_text):
+    df = pd.read_csv("/content/eye-movement/SB-SAT/fixation/18sat_fixfinal.csv")
+    label = pd.read_csv("/content/eye-movement/SB-SAT/fixation/18sat_labels.csv")
+    label_dict = {label: idx for idx, label in enumerate(label.columns.tolist())}
+    
+    ## old label_arr
+    
+    labelcols = [
+        'subj', 'book', 'acc_level', 'subj_acc_level', 'confidence', 'difficulty', 'familiarity',
+        'interest', 'pressured', 'sleepiness', 'sleephours', 'sex', 'native',
+    ]
+    sc = label.copy()
+    sc['sex'] = sc['sex'].replace(['F', 'M'], [1, 0])
+    binarycols = ('recognition', 'sex', 'native')
+    subsetcols = [c for c in labelcols if c not in binarycols]
+    sc[subsetcols] = sc[subsetcols].replace([0, 1, 2, 3], [0, 0, 1, 1])
+    
+    
+    
+    
+    
+    ###
+    df['word_length'] = df.apply(adding_word_length, axis = 1)
+    
+    df.rename(columns= {"RECORDING_SESSION_LABEL": "pnr", "CURRENT_FIX_X": "xx", "CURRENT_FIX_Y": "yy", "CURRENT_FIX_PUPIL": "pupil", \
+                    "CURRENT_FIX_DURATION":"duration", "CURRENT_FIX_INTEREST_AREA_ID":"word_loc", "CURRENT_FIX_INTEREST_AREA_LABEL": "word"}, inplace = True)
+
+    word_occ = df[['pnr','page_name' ,'word_loc','word', 'word_length']].groupby(['pnr','page_name' ,'word_loc','word'], as_index= False).count()
+    word_occ.rename(columns = {"word_length":"word_occurance_count"}, inplace=True)
+
+
+
+    df = df.merge(word_occ, on= ['pnr','page_name' ,'word_loc','word'])
+    
+    df.rename(columns= {"CURRENT_FIX_INTEREST_AREA_PIXEL_AREA": "pixel_area", "CURRENT_FIX_INTEREST_AREA_DWELL_TIME": "dwell_time", "PREVIOUS_SAC_DIRECTION": "sac_direction", "PREVIOUS_SAC_ANGLE": "sac_angle", \
+                    "PREVIOUS_SAC_AMPLITUDE":"sac_amplitude", "PREVIOUS_SAC_AVG_VELOCITY":"sac_velcity", "PREVIOUS_SAC_CONTAINS_BLINK": "sac_blink"}, inplace = True)
+    
+    selected_cols = ['pnr', 'xx', 'yy', 'pupil', 'duration', 'RT',  'word_length', 'word_occurance_count', 'book_name', 'page_name', 'word', 'word_loc', \
+                 'pixel_area', 'dwell_time','sac_direction', 'sac_angle', 'sac_amplitude', 'sac_velcity','sac_blink']
+
+    df_cognitive = df[selected_cols] \
+    .merge(label, left_on=['pnr', 'book_name'], right_on=['subj', 'book'], how = 'inner' )
+    
+    df_cognitive['sex'] = df_cognitive['sex'].map({'M':1, 'F':0})
+    data = df_cognitive.copy()
+    data.to_csv("/content/eye-movement/SB-SAT/fixation/df_cognitive.csv",index= False)
+    
+    dummies_sac_direction = pd.get_dummies(data.sac_direction)
+    data = pd.concat([data, dummies_sac_direction], axis = 1).drop("sac_direction", axis = 1)
+    
+    # seq_length = 50
+
+
+    mat, target , target_subj, mask, words, label_arr = data_prep(data, seq_len = seq_length, sc = sc)
+    
+    if scale:
+        scaler = StandardScaler()
+        mat = scaler.fit_transform(mat.reshape(-1, mat.shape[-1])).reshape(mat.shape)
+        # X_test = scaler.transform(X_test.reshape(-1, X_test.shape[-1])).reshape(X_test.shape)
+        
+        # scaler = StandardScaler()
+        # scaler.fit(mat)
+        # mat = scaler.transform(mat)
+
+
+
+
+
+
+        # print(scaler.transform(a))
+    
+    word_df = pd.DataFrame({"text_lst": words})
+    word_df['text'] = word_df.text_lst.apply(lambda x: ' '.join(x) if x is not None else x)
+
+    if preprocess_text:
+        word_df['text']= word_df['text'].apply(lambda x:remove_punctuation(x))
+        word_df['text']= word_df['text'].apply(lambda x: x.lower() if x is not None else None)
+        word_df['text']=word_df['text'].apply(lambda x:lemmatizer(x))
+        
+
+
+    mask = np.array(mask)
+    target = np.array(target)
+    target_subj = np.array(target_subj)
+    ii = np.invert(pd.isnull(target))
+    new_target = target[ii]
+    new_target_subj = target_subj[ii]
+    new_mat = mat[ii, :, :]
+    new_mask = mask[ii, :]
+    new_word_df = word_df.iloc[ii, :]
+    label_arr = label_arr[ii, :]
+
+
+
+
+    new_word_df = words_to_token_df(data = new_word_df, maximum_length = seq_length)
+    new_word_df = input_id_to_embeddings(new_word_df, seq_length)
+
+
+
+    return new_mat, new_target , new_target_subj, new_mask, new_word_df, label_dict, label_arr
+    
+
+
+
+        
