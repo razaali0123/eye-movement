@@ -5,8 +5,7 @@ import os
 import random
 from typing import Any
 
-# import feature_extraction
-import concise_features
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold
