@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold
 from tqdm import tqdm
-from data_gen import data_gen
+from utils.data_gen_unaligned import data_gen
 import argparse
 
 
