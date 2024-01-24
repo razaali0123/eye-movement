@@ -27,7 +27,8 @@ from tensorflow.keras.layers import LSTM
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
-
+from transformers import AutoTokenizer, TFDistilBertForSequenceClassification
+from eyettension import eye
 
 
 from keras.layers import LSTM
@@ -57,16 +58,37 @@ def whole_book_analysis(book_list, df_cognitive):
 
 
 def get_nn_model(dropout, x_train, input_shape):
+    
+    distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
 
 
     dropout_rate = dropout
 
-    # input_shape = 100
-    lstm_input = tf.keras.Input(shape=( input_shape,),dtype='float32')
-    embeddings = tf.keras.layers.Embedding(1000, 64, input_length=input_shape)(lstm_input)
+
+    transformer_input_id = tf.keras.Input(shape=(input_shape,),dtype='int32')
+    transformer_input_att = tf.keras.Input(shape=(input_shape,),dtype='int32')
+    transformer_input_mask = tf.keras.Input(shape=(input_shape,),dtype='int32')
 
 
-    lstm = Bidirectional(LSTM(256, dropout=dropout_rate,  return_sequences=True))(embeddings)
+
+    lstm_input = tf.keras.Input(shape=(input_shape, x_train.shape[2]),dtype='float32')
+
+
+    output = distill_model([transformer_input_id,transformer_input_att])
+    output = output.hidden_states[-1]
+
+
+
+    merged_word_emb = np.zeros(output.shape)
+    mask = transformer_input_mask
+    for d in range(mask.shape[0]):
+        for word_idx in range(mask.shape[1]):
+            ii = (word_idx == mask[d, :])
+            merged_word_emb[d, word_idx, :] = np.mean(output[d, ii, :], axis=0)
+
+    concat = tf.keras.layers.concatenate([output, lstm_input], axis  = 2, name = 'concat')
+
+    lstm = Bidirectional(LSTM(256, dropout=dropout_rate,  return_sequences=True))(concat)
     lstm = Bidirectional(LSTM(128, dropout=dropout_rate))(lstm)
 
 
@@ -85,7 +107,7 @@ def get_nn_model(dropout, x_train, input_shape):
     output = tf.keras.layers.Dropout(dropout_rate)(output)
 
     output = tf.keras.layers.Dense(1 ,activation='sigmoid')(output)
-    model = tf.keras.models.Model(inputs = lstm_input,outputs = output)
+    model = tf.keras.models.Model(inputs = [transformer_input_id,transformer_input_att,transformer_input_mask, lstm_input],outputs = output)
 
     model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), metrics= ['AUC', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
         
@@ -181,6 +203,7 @@ def train_nn(
 
 
 
+
             hyper = {"seq_len_list": seq_list,
                         "dropout_list": dropout_list}
             
@@ -216,10 +239,21 @@ def train_nn(
                             y_train_path, allow_pickle=True,
                         )
                         x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
+                        x_train_fix_all = x_train_fix_all.astype("int32")
 
-                        x_train_fix_all = x_train_fix_all[:, :seq]
+                        n = int(x_train_fix_all.shape[1]/3)
+
+                        ii = [False]*x_train_fix_all.shape[1]
+                        ii[:seq] = [True] * seq
+                        ii[n:n+seq]= [True] * seq
+                        ii[2*n:2*n+seq]= [True] * seq
+
+                        x_train_fix_all = x_train_fix_all[:,ii]
+
                         x_train_all = x_train_all[:, :seq, :]
 
+                        
+                        
                         if normalize_flag:
                             scaler = MinMaxScaler()
                             fix_scaler = MinMaxScaler()
@@ -285,21 +319,37 @@ def train_nn(
                         x_val = x_train_all[val_idx]
                         y_val = y_train_all[val_idx]
 
+                        n = int(x_train_fix_all.shape[1]/3)
+                        xtr_words_id = x_train_fix_all[train_idx, :n]
+                        xtr_words_att = x_train_fix_all[train_idx, n:2*n]
+                        xtr_words_mask = x_train_fix_all[train_idx, 2*n:]
+
+
                         
-                        xtr_words = x_train_fix_all[train_idx, :]
-                        val_words = x_train_fix_all[val_idx, :]
+                        val_words_id = x_train_fix_all[val_idx, :n]
+                        val_words_att = x_train_fix_all[val_idx, n:2*n]
+                        val_words_mask = x_train_fix_all[val_idx, 2*n:]
+
+
 
                         y_train = np.array(y_train[:, label_dict[label]], dtype=int)
                         y_val = np.array(y_val[:, label_dict[label]], dtype=int)
 
                         
-                        train_inputs.append(xtr_words)
-                        train_inputs.append(x_train)
+                        train_inputs.append(xtr_words_id)
+                        train_inputs.append(xtr_words_att)
+                        train_inputs.append(xtr_words_mask)
 
+
+                        train_inputs.append(x_train)
 
                         
 
-                        val_inputs.append(val_words)
+                        val_inputs.append(val_words_id)
+                        val_inputs.append(val_words_att)
+                        val_inputs.append(val_words_mask)
+
+
                         val_inputs.append(x_val)
 
 
@@ -319,21 +369,35 @@ def train_nn(
                         x_test_all, y_test_all = np.load(X_test_path).astype(float), np.load(
                             y_test_path, allow_pickle=True,
                         )
-                        x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype(float)
-                        x_test_fix_all = tf.cast(x_test_fix_all, tf.float32)
+                        x_test_fix_all = np.load(X_test_fix_path, allow_pickle=True).astype("int32")
+                        x_test_fix_all = x_test_fix_all.astype("int32")
 
-                        x_test_fix_all = x_test_fix_all[:, :seq]
+                        x_test_fix_all = x_test_fix_all[:, ii]
                         x_test_all = x_test_all[:, :seq, :]
 
-                        test_inputs.append(x_test_fix_all)
+
+                        n = int(x_test_fix_all.shape[1]/3)
+                        xte_words_id = x_test_fix_all[:, :n]
+                        xte_words_att = x_test_fix_all[:, n:2*n]
+                        xte_words_mask = x_test_fix_all[:, 2*n:]
+
+
+                        test_inputs.append(xte_words_id)
+                        test_inputs.append(xte_words_att)
+                        test_inputs.append(xte_words_mask)
+
+
                         test_inputs.append(x_test_all)
 
+
+                        
                         y_test = np.array(y_test_all[:, label_dict[label]], dtype=int)
 
 
 
+                        model = eye(drop, max_len = seq)
+                        model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(learning_rate=2e-5), metrics= ['AUC', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
 
-                        model = get_nn_model(drop, x_train, seq)
 
                         tf.keras.backend.clear_session()
                         callbacks = [
@@ -342,9 +406,9 @@ def train_nn(
                             ),
                         ]
                         history = model.fit(  # noqa: F841
-                            train_inputs[0], y_train,
+                            train_inputs, y_train,
                             validation_data=(
-                                val_inputs[0],
+                                val_inputs,
                                 y_val,
                             ),
                             batch_size=batch_size,
@@ -354,7 +418,7 @@ def train_nn(
                         )
 
                         y_pred = model.predict(
-                            test_inputs[0],
+                            test_inputs,
                             batch_size=batch_size,
                         )
                         y_pred = np.array(y_pred).reshape(-1)
@@ -436,7 +500,6 @@ def train_nn(
 
 
     print("Saving the final results ...")
-    pd.DataFrame(final_df).to_csv(f"{save_dir}")
 
 
 
@@ -486,7 +549,9 @@ def main():
 
 
     normalize_flag = False
+    use_gaze_entropy_features = True
 
+    flag_redo = True
     patience = 7
     batch_size = 256
     epochs = 60
@@ -495,7 +560,6 @@ def main():
     labels = ['subj_acc_level', 'acc_level', 'native', 'difficulty']
     
     model_name = 'nn_Raza'
-
 
 
 
