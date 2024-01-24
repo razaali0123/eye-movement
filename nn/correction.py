@@ -30,13 +30,10 @@ from tensorflow.keras.optimizers import Adam
 
 
 
-# from keras.models import Sequential
 from keras.layers import LSTM
-# from keras.layers import Dense
-# from keras.layers import TimeDistributed
+
 from keras.layers import Bidirectional
 
-# from utils import feature_extraction as feature_extraction
 sys.path.append(os.getcwd())
 
 def whole_book_analysis(book_list, df_cognitive):
@@ -61,9 +58,7 @@ def whole_book_analysis(book_list, df_cognitive):
 
 
 def get_nn_model(dropout, x_train, input_shape):
-    # df_cognitive = pd.read_csv("/home/raza/repo/etra-reading-comprehension/SB-SAT/fixation/df_cognitive.csv")
     
-    # distill_model = TFDistilBertForSequenceClassification.from_pretrained("distilbert-base-uncased", output_hidden_states = True)
 
 
     dropout_rate = dropout
@@ -77,35 +72,9 @@ def get_nn_model(dropout, x_train, input_shape):
     concat = tf.keras.layers.concatenate([fixation_input, embeddings], axis  = 2, name = 'concat')
     lstm = Bidirectional(LSTM(256, dropout=dropout_rate,  return_sequences=True))(concat)
     lstm = Bidirectional(LSTM(128, dropout=dropout_rate))(lstm)
-    # transformer_input = tf.keras.Input(shape=(input_shape, 768),dtype='float32')
-    # # att = tf.keras.Input(shape=(input_shape,),dtype='int32')
-
-    # lstm_input = tf.keras.Input(shape=(input_shape, x_train.shape[2]),dtype='float32')
-
-    # lstm = Bidirectional(LSTM(16, dropout=0.2)(lstm)
-    # lstm = Bidirectional(LSTM(3, dropout=0.2)(lstm)
 
 
 
-    # output = distill_model([ids,att])
-    # output = output.hidden_states
-    # n = len(output)
-    # lst = [output[o] for o in range(n)]
-    # concat_transformer = tf.keras.layers.concatenate(lst, axis  = 2, name = 'concat_transformer')
-    # concat = tf.keras.layers.concatenate([transformer_input, lstm_input], axis  = 2, name = 'concat')
-    # # output = tf.keras.layers.Flatten()(output)
-    # ## lstm addition
-    # # lstm = Bidirectional(LSTM(256, dropout=0.1, return_sequences=True))(lstm_input)
-    # lstm = Bidirectional(LSTM(256, dropout=dropout_rate,  return_sequences=True))(concat)
-    # lstm = Bidirectional(LSTM(128, dropout=dropout_rate))(lstm)
-
-    # output_lstm = tf.keras.layers.Dense(64,activation='relu')(lstm)
-    # output_lstm = tf.keras.layers.Dense(3,activation='softmax')(lstm)
-
-
-
-    ## Concat
-    # concat = tf.keras.layers.concatenate([output, lstm], axis  = 1, name = 'concat')
 
     ## Now dense continues
 
@@ -123,12 +92,7 @@ def get_nn_model(dropout, x_train, input_shape):
 
     output = tf.keras.layers.Dense(1 ,activation='sigmoid')(output)
     model = tf.keras.models.Model(inputs = [lstm_input, fixation_input],outputs = output)
-    # model.compile(Adam(lr=6e-6), loss='binary_crossentropy', metrics=['accuracy'])
-    # for i in model.layers:
-    #     if (i.name.startswith('tf_distil')):
-    #         i.trainable = False
-    #     else:
-    #         i.trainable = True
+
     model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), metrics= ['AUC', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
         
     return model
@@ -140,7 +104,7 @@ def help_roc_auc(y_true, y_pred):
     else:
         return roc_auc_score(y_true, y_pred)
 
-# calculate the roc-auc as a metric
+
 
 
 def auroc(y_true, y_pred):
@@ -171,15 +135,10 @@ def transformer_encode(data,maximum_length, tokenizer) :
 
 def train_nn(
     spit_criterions, labels,
-    feature_names_per_word,
     model_name,
-    input_shape,
-    dropout,
     seq_list,
     dropout_list,
-    flag_redo=False,
     normalize_flag=True,
-    use_gaze_entropy_features=True,
     patience=50,
     batch_size=256,
     epochs=1000,
@@ -187,7 +146,6 @@ def train_nn(
     save_csv=True,
     save_joblib=False,
 ):
-    # tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
     final_df = {}
     final_df['seq_len'] = []
     final_df['dropout'] = []
@@ -197,20 +155,8 @@ def train_nn(
     for split_criterion in spit_criterions:
         for label in labels:
 
-            # model_prefix = str(flag_sequence_bilstm) +\
-            #     '_' + str(word_in_fixation_order) +\
-            #     '_' + str(use_reduced_pos_sequence) +\
-            #     '_' + str(use_content_word_sequence) +\
-            #     '_' + str(use_numeric) +\
-            #     '_' + str(use_fixation_sequence) +\
-            #     '_'
+
             model_prefix = "_new_prefix_"
-            csv_save_path = f'{save_dir}{model_prefix}_dropout_{dropout}_seqlen_{input_shape}_{split_criterion}_text_sequence_{label}.csv'  # noqa: E501
-            joblib_save_path = csv_save_path.replace('.csv', '.joblib')
-            if not flag_redo and save_csv and os.path.exists(csv_save_path):
-                continue
-            if not flag_redo and save_joblib and os.path.exists(joblib_save_path):
-                continue
             SB_SAT_PATH = f'/content/paper_splits/{split_criterion}/'
             split_criterion_dict = {
                 'subj': 0,
@@ -276,17 +222,10 @@ def train_nn(
                             y_train_path, allow_pickle=True,
                         )
                         x_train_fix_all = np.load(X_train_fix_path, allow_pickle= True)
-                        # x_train_fix_all = x_train_fix_all.astype("float")
 
                         x_train_fix_all = x_train_fix_all[:, :seq]
                         x_train_all = x_train_all[:, :seq, :]
-                        # x_train_fix_all = tf.cast(x_train_fix_all, tf.float32)
-                        
-                        # x_train_fix_all = pd.DataFrame(x_train_fix_all, columns = ['text_list', 'text'])
-
-                        
-                        
-                        # x_train_fix_postions = x_train_fix_all[:, :, 4]
+   
                         if normalize_flag:
                             scaler = MinMaxScaler()
                             fix_scaler = MinMaxScaler()
@@ -355,31 +294,22 @@ def train_nn(
                         
                         xtr_words = x_train_fix_all[train_idx, :]
                         val_words = x_train_fix_all[val_idx, :]
-                        # y_train_all[val_idx]
 
                         y_train = np.array(y_train[:, label_dict[label]], dtype=int)
                         y_val = np.array(y_val[:, label_dict[label]], dtype=int)
-                        # input_ids, attention_masks = transformer_encode(xtr_words.reset_index(drop = True), input_shape, tokenizer)
-                        # val_input_ids, val_attention_masks = transformer_encode(val_words.reset_index(drop = True), input_shape, tokenizer)
                         
                         
                         train_inputs.append(xtr_words)
                         train_inputs.append(x_train)
 
-                        
-                        # train_inputs.append(input_ids)
-                        # train_inputs.append(attention_masks)
-                        # train_inputs.append(x_train)
+
                         
 
                         val_inputs.append(val_words)
                         val_inputs.append(x_val)
-                        # val_inputs.append(val_input_ids)
-                        # val_inputs.append(val_attention_masks)
-                        # val_inputs.append(x_val)
 
 
-                        # print("test val is ", x_val.shape)
+
 
                         # Test Data
                         X_test_path = os.path.join(
@@ -402,45 +332,17 @@ def train_nn(
 
                         x_test_fix_all = x_test_fix_all[:, :seq]
                         x_test_all = x_test_all[:, :seq, :]
-                        # x_test_fix_postions = x_test_fix_all[:, :, 4]
-                        # x_test_fix_all = pd.DataFrame(x_test_fix_all, columns = ['text_list', 'text'])
-                        # test_input_ids, test_attention_masks = transformer_encode(x_test_fix_all.reset_index(drop = True), input_shape, tokenizer)
-                        # test_inputs.append(test_input_ids)
-                        # test_inputs.append(test_attention_masks)
-                        # test_inputs.append(x_test_all)
+
                         test_inputs.append(x_test_fix_all)
                         test_inputs.append(x_test_all)
 
 
                         
-                        # val_inputs.append(input_ids)
-                        # val_inputs.append(attention_masks)
-                        # val_inputs.append(x_test_all)
 
-                        # print("test input ids are ", input_ids.shape)
-                        # print("test attention ids are ", attention_masks.shape)
-                        # print("test x_test_all ids are ", x_test_all.shape)
-                        # print("test val is ", x_val.shape)
-                        
-                        # if normalize_flag:
-                        #     x_test_all = scaler.transform(
-                        #         x_test_all.reshape(-1, x_test_all.shape[-1]),
-                        #     ).reshape(x_test_all.shape)
-                        #     x_test_fix_all = fix_scaler.transform(
-                        #         x_test_fix_all.reshape(-1, x_test_fix_all.shape[-1]),
-                        #     ).reshape(x_test_fix_all.shape)
-                        #     x_test_fix_all = np.where(
-                        #         np.isnan(x_test_fix_all), -4, x_test_fix_all,
-                        #     )
                         y_test = np.array(y_test_all[:, label_dict[label]], dtype=int)
 
 
 
-                        # scale the input
-                        # input_scaler = MinMaxScaler()
-                        # x_train = input_scaler.fit_transform(x_train)
-                        # x_val = input_scaler.transform(x_val)
-                        # x_test = input_scaler.transform(x_test)
 
 
 
@@ -570,8 +472,6 @@ def main():
 
     # )
     parser.add_argument('-save_dir', '--save_dir', type=str, default='True')
-    parser.add_argument('-seq_len', '--seq_len', type=int, default=50)
-    parser.add_argument('-dropout', '--dropout', type=float, default=0.3)
 
     parser.add_argument(
     "-seq_len_list",  # name on the CLI - drop the `--` for positional/required parameters
@@ -591,45 +491,23 @@ def main():
     args = parser.parse_args()
 
     save_dir = args.save_dir
-    input_shape = args.seq_len
-    dropout = args.dropout
     seq_list = args.seq_len_list
     dropout_list = args.dropout_list
 
 
 
     normalize_flag = False
-    use_gaze_entropy_features = True
 
-    flag_redo = True
     patience = 7
     batch_size = 256
     epochs = 60
 
     spit_criterions = ['book-page', 'subj', 'book']
     labels = ['subj_acc_level', 'acc_level', 'native', 'difficulty']
-    # labels = ['subj_acc_level', 'acc_level']
+
     
     model_name = 'nn_Raza'
 
-    feature_names_per_word = [
-        'ff',
-        'tf',
-        'wfc_ff_nomarlized',
-        'wfc_tf_normalized',
-        'sc_ff_normalized',
-        'sc_tf_normalized',
-        'ic_ff_normalized',
-        'ic_tf_normalized',
-        'regression',
-        'num_regressions',
-        'num_progressions',
-        'surprisal',
-        'word_len',
-        'dependencies_right',
-        'dependencies_left',
-        'dependency_distance',
-    ]
 
 
 
@@ -638,21 +516,10 @@ def main():
     train_nn(
         spit_criterions=spit_criterions,
         labels=labels,
-        feature_names_per_word=feature_names_per_word,
         model_name=model_name,
-        input_shape = input_shape,
-        dropout = dropout,
         seq_list = seq_list,
         dropout_list = dropout_list,
-        # flag_sequence_bilstm=flag_sequence_bilstm,
-        # word_in_fixation_order=word_in_fixation_order,
-        # use_reduced_pos_sequence=use_reduced_pos_sequence,
-        # use_content_word_sequence=use_content_word_sequence,
-        # use_numeric=use_numeric,
-        # use_fixation_sequence=use_fixation_sequence,
-        flag_redo=flag_redo,
         normalize_flag=normalize_flag,
-        use_gaze_entropy_features=use_gaze_entropy_features,
         patience=patience,
         batch_size=batch_size,
         epochs=epochs,
