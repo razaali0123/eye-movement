@@ -31,7 +31,6 @@ from tensorflow.keras.optimizers import Adam
 
 
 from keras.layers import LSTM
-
 from keras.layers import Bidirectional
 
 sys.path.append(os.getcwd())
@@ -58,7 +57,6 @@ def whole_book_analysis(book_list, df_cognitive):
 
 
 def get_nn_model(dropout, x_train, input_shape):
-    
 
 
     dropout_rate = dropout
@@ -68,12 +66,8 @@ def get_nn_model(dropout, x_train, input_shape):
     embeddings = tf.keras.layers.Embedding(1000, 64, input_length=input_shape)(lstm_input)
 
 
-    fixation_input = tf.keras.Input(shape=(input_shape, x_train.shape[2]),dtype='float32')
-    concat = tf.keras.layers.concatenate([fixation_input, embeddings], axis  = 2, name = 'concat')
-    lstm = Bidirectional(LSTM(256, dropout=dropout_rate,  return_sequences=True))(concat)
+    lstm = Bidirectional(LSTM(256, dropout=dropout_rate,  return_sequences=True))(embeddings)
     lstm = Bidirectional(LSTM(128, dropout=dropout_rate))(lstm)
-
-
 
 
     ## Now dense continues
@@ -91,7 +85,7 @@ def get_nn_model(dropout, x_train, input_shape):
     output = tf.keras.layers.Dropout(dropout_rate)(output)
 
     output = tf.keras.layers.Dense(1 ,activation='sigmoid')(output)
-    model = tf.keras.models.Model(inputs = [lstm_input, fixation_input],outputs = output)
+    model = tf.keras.models.Model(inputs = lstm_input,outputs = output)
 
     model.compile(loss=tf.keras.losses.BinaryCrossentropy(), optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), metrics= ['AUC', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
         
@@ -104,7 +98,7 @@ def help_roc_auc(y_true, y_pred):
     else:
         return roc_auc_score(y_true, y_pred)
 
-
+# calculate the roc-auc as a metric
 
 
 def auroc(y_true, y_pred):
@@ -225,7 +219,7 @@ def train_nn(
 
                         x_train_fix_all = x_train_fix_all[:, :seq]
                         x_train_all = x_train_all[:, :seq, :]
-   
+
                         if normalize_flag:
                             scaler = MinMaxScaler()
                             fix_scaler = MinMaxScaler()
@@ -297,7 +291,7 @@ def train_nn(
 
                         y_train = np.array(y_train[:, label_dict[label]], dtype=int)
                         y_val = np.array(y_val[:, label_dict[label]], dtype=int)
-                        
+
                         
                         train_inputs.append(xtr_words)
                         train_inputs.append(x_train)
@@ -307,8 +301,6 @@ def train_nn(
 
                         val_inputs.append(val_words)
                         val_inputs.append(x_val)
-
-
 
 
                         # Test Data
@@ -336,12 +328,7 @@ def train_nn(
                         test_inputs.append(x_test_fix_all)
                         test_inputs.append(x_test_all)
 
-
-                        
-
                         y_test = np.array(y_test_all[:, label_dict[label]], dtype=int)
-
-
 
 
 
@@ -355,9 +342,9 @@ def train_nn(
                             ),
                         ]
                         history = model.fit(  # noqa: F841
-                            train_inputs, y_train,
+                            train_inputs[0], y_train,
                             validation_data=(
-                                val_inputs,
+                                val_inputs[0],
                                 y_val,
                             ),
                             batch_size=batch_size,
@@ -367,7 +354,7 @@ def train_nn(
                         )
 
                         y_pred = model.predict(
-                            test_inputs,
+                            test_inputs[0],
                             batch_size=batch_size,
                         )
                         y_pred = np.array(y_pred).reshape(-1)
@@ -473,6 +460,7 @@ def main():
     # )
     parser.add_argument('-save_dir', '--save_dir', type=str, default='True')
 
+
     parser.add_argument(
     "-seq_len_list",  # name on the CLI - drop the `--` for positional/required parameters
     nargs="*",  # 0 or more values expected => creates a list
@@ -491,6 +479,7 @@ def main():
     args = parser.parse_args()
 
     save_dir = args.save_dir
+
     seq_list = args.seq_len_list
     dropout_list = args.dropout_list
 
@@ -504,9 +493,9 @@ def main():
 
     spit_criterions = ['book-page', 'subj', 'book']
     labels = ['subj_acc_level', 'acc_level', 'native', 'difficulty']
-
     
     model_name = 'nn_Raza'
+
 
 
 
